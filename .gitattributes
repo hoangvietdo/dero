@@ -1,1 +1,2 @@
-src/odrpack/* linguist-vendored=false
+src/odrpack/* -linguist-vendored
+
