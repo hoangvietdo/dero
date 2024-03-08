@@ -1,0 +1,19 @@
+Datasets:
+  carried_1:
+    label: carried_1
+  carried_2:
+    label: carried_2
+  carried_3:
+    label: carried_3
+  carried_4:
+    label: carried_4
+  carried_5:
+    label: carried_5   
+Algorithms:
+  ekf_rio:
+    fn: traj_est
+    label: EKF RIO
+  ekf_drins:
+    fn: traj_est
+    label: SC-IEKF DeRO
+RelDistances: [50, 100, 150, 200]
