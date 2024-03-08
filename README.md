@@ -51,8 +51,7 @@ Note: There will be some warnings, but just ignore them.
 - This work was supported by the Unmanned Vehicles Core Technology Research and Development Program through the National Research Foundation of Korea (NRF), Unmanned Vehicle Advanced Research Center (UVARC) funded by the Ministry of Science and ICT, the Republic of Korea (No. 2020M3C1C1A01086408 and NRF-2023M3C1C1A01098408).
 
 ## 7. Citation
-If you feel this work helpful to your academic research, we kindly ask you to cite our paper :
-
+If you find this work beneficial to your academic research, we would greatly appreciate it if you could reference our paper in your citations.
 ```
 ```
 
