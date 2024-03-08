@@ -46,7 +46,7 @@ Note: There will be some warnings, but just ignore them.
 - The pseudo-ground truth is given in ```results/carried_datasets/laptop/```.
 
 ## 6. Credit / Acknowledgements
-- This code was written by the [Intelligent Navigation and Control Systems Laboratory](https://sites.google.com/view/incsl) at the Sejong University, Seoul, Republic of Korea.
+- This code was written at the [Intelligent Navigation and Control Systems Laboratory](https://sites.google.com/view/incsl), Sejong University, Seoul, Republic of Korea.
 - Some parts of the code are referenced from [REVE](https://github.com/christopherdoer/reve), [EKF-RIO](https://github.com/christopherdoer/rio/tree/main/ekf_rio), and [EnVIO](https://github.com/lastflowers/envio).
 - This work was supported by the Unmanned Vehicles Core Technology Research and Development Program through the National Research Foundation of Korea (NRF), Unmanned Vehicle Advanced Research Center (UVARC) funded by the Ministry of Science and ICT, the Republic of Korea (No. 2020M3C1C1A01086408 and NRF-2023M3C1C1A01098408).
 
