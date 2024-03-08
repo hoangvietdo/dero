@@ -56,4 +56,4 @@ If you find this work beneficial to your academic research, we would greatly app
 ```
 
 ## 8. License
-Our source code is released under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license. If there are any issues in our source code please contact the author [(hoangvietdo@sju.ac.kr)](mailto:hoangvietdo@sju.ac.kr).
+Our source code is released under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license. If there are any issues in our source code please contact the author [hoangvietdo@sju.ac.kr](mailto:hoangvietdo@sju.ac.kr).
