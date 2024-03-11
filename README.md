@@ -1,7 +1,7 @@
 # DeRO
 ## Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization
 ## News / Events
-- **March 11, 2024** - The manuscript has been online at the [ArXiv](https://arxiv.org/abs/2403.05136).
+- **March 11, 2024** - The manuscript has been online at the [arXiv](https://arxiv.org/abs/2403.05136).
 - **March 5, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
 
 ## 1. Overview
