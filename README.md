@@ -18,7 +18,7 @@ This is a ROS package for DeRO, written in C++. DeRO utilizes 4D point cloud mea
 
 ## 3. Build
 - Clone the repository and build:
-```
+```cmd
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/hoangvietdo/dero
@@ -33,11 +33,11 @@ Note: There will be some warnings, but just ignore them.
 - Choose the dataset you want to run on (e.g., Carried 1, Carried 2, etc.) and convert the ROS1 bag to ROS2 bag using ```rosbags-convert```.
 - Change the value of ```est_save_dir``` and ```bag_dir``` in the corresponding launch file (e.g., ```dero_carried_1_ros2bag.launch.py``` (proposed method) or ```rio_carried_1_ros2bag.launch.py``` (compared method))
 - In 1st terminal: Execute the launch file
-  ```
+  ```cmd
   ros2 launch dero dero_carried_1_ros2bag.launch.py
   ```
 - In 2nd terminal: Open the rviz config file ```config/dero_carried_1.rviz``` using
-  ```
+  ```cmd
   rviz2
   ```
 
@@ -53,7 +53,7 @@ Note: There will be some warnings, but just ignore them.
 
 ## 7. Citation
 If you find this work beneficial to your academic research, we would greatly appreciate it if you could reference our paper in your citations.
-```
+```bibtex
 @misc{do2024dero,
       title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
       author={Hoang Viet Do and Yong Hun Kim and Joo Han Lee and Min Ho Lee and Jin Woo Song},
