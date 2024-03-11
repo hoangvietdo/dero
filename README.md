@@ -1,6 +1,7 @@
 # DeRO
 ## Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization
 ## News / Events
+- **March 11, 2024** - The manuscript has been online at the [ArXiv](https://arxiv.org/abs/2403.05136).
 - **March 5, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
 
 ## 1. Overview
@@ -53,6 +54,14 @@ Note: There will be some warnings, but just ignore them.
 ## 7. Citation
 If you find this work beneficial to your academic research, we would greatly appreciate it if you could reference our paper in your citations.
 ```
+@misc{do2024dero,
+      title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
+      author={Hoang Viet Do and Yong Hun Kim and Joo Han Lee and Min Ho Lee and Jin Woo Song},
+      year={2024},
+      eprint={2403.05136},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
 ```
 
 ## 8. License
