@@ -23,7 +23,6 @@ mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/hoangvietdo/dero
 cd ..
-rosdep install --from-paths src --ignore-src -r -y
 colcon build
 ```
 
