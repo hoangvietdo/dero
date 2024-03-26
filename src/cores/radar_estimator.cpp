@@ -24,7 +24,7 @@ namespace incsl {
 
 RadarEstimator::RadarEstimator() {} // RadarVelocityEstimator
 
-void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg,
+bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg,
                              const RadarVelocityEstimatorParam    param,
                              const RadarPositionEstimatorParam    radar_position_estimator_param,
                              const Mat4d &init_guess_pose, const bool &use_dr_structure) {
@@ -62,7 +62,7 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
     radar_info_ = "Detected supported (UMRR-11 type-132) radar point cloud type!";
   } else {
     radar_info_ = "Detected unsupported radar point cloud type!";
-    ego_velocity_ << 1.0 / 0.0, 1.0 / 0.0, 1.0 / 0.0;
+    ego_velocity_ << 1.0 / 0.0, 1.0 / 0.0, 1.0 / 0.0; // NaN
   }
 
   // Filtering
@@ -84,7 +84,7 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
             -target.v_doppler_mps * param.velocity_correction_factor, target.noise_db;
         valid_targets.emplace_back(v);
       } // if p_stab.z()
-    }   // if r > param.min_distance
+    } // if r > param.min_distance
   }
 
   if (valid_targets.size() > 2) {
@@ -98,11 +98,9 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
     const auto median = v_dopplers[n];
     v_dopplers.clear();
 
-    for (const auto &item : valid_targets)
-      radar_scan_raw.push_back(toRadarPointCloudType(item, idx_));
-
     if (median < param.zero_velocity_threshold) {
-      radar_info_ = "Zero velocity detected!";
+      zupt_trigger = true;
+      radar_info_  = "Zero velocity detected!";
 
       v_r = Vec3d(0, 0, 0);
       P_v_r.setIdentity();
@@ -112,9 +110,11 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
       for (const auto &item : valid_targets)
         if (std::fabs(item[idx_.v_d]) < param.zero_velocity_threshold)
           radar_scan_inlier.push_back(toRadarPointCloudType(item, idx_));
+
     } else {
+      zupt_trigger = false;
       // LSQ velocity estimation
-      radar_info_ = "No zero velocity!";
+      radar_info_  = "No zero velocity!";
       MatXd radar_data(valid_targets.size(), 4); // rx, ry, rz, v
       uint  j = 0;
 
@@ -140,11 +140,8 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
 
           std::cout << "using ODR" << std::endl;
           solve3DODR(radar_data_inlier, v_r, P_v_r, param);
-
         } // else std::cout << "ODR condition is not satisfied, skipping ODR algorithm!" << std::endl; // if use_odr
-
         inlier_idx_best.clear();
-
       } else {
         solve3DLsq(radar_data, v_r, P_v_r, true, param);
 
@@ -156,16 +153,14 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
         if (param.use_odr && v_r.norm() > param.min_speed_odr && radar_scan_inlier.size() > param.odr_inlier_threshold)
           solve3DODR(radar_data, v_r, P_v_r, param);
       } // if-else use_ransac
-    }   // if median
-  }     // if valid_targets
+    } // if median
+  } // if valid_targets
 
   setEgoVelocity(v_r);
   setEgoVelocityCovariance(P_v_r);
 
   radar_scan_inlier.height = 1;
   radar_scan_inlier.width  = radar_scan_inlier.size();
-  radar_scan_raw.height    = 1;
-  radar_scan_raw.width     = radar_scan_raw.size();
 
   pcl::PCLPointCloud2 foo;
   pcl::toPCLPointCloud2<RadarPointCloudType>(radar_scan_inlier, foo);
@@ -174,37 +169,27 @@ void RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
   setInlierRadarRos2PCL2(inlier_radar_msg_);
   setInlierRadarPcl(pcl_vec_);
 
-  bool use_inlier = true;
-
   if (!radar_scan_inlier.empty()) {
     if (use_dr_structure) {
-      if (use_inlier) {
-        if (first_scan) {
-          first_scan             = false;
-          prev_radar_scan_inlier = radar_scan_inlier;
-        } else {
-          solveICP(prev_radar_scan_inlier, radar_scan_inlier, radar_position_estimator_param, init_guess_pose);
-          prev_radar_scan_inlier = radar_scan_inlier;
-        }
+      if (first_scan) {
+        first_scan             = false;
+        prev_radar_scan_inlier = radar_scan_inlier;
       } else {
-        if (first_scan) {
-          first_scan          = false;
-          prev_radar_scan_raw = radar_scan_raw;
-        } else {
-          solveICP(prev_radar_scan_raw, radar_scan_raw, radar_position_estimator_param, init_guess_pose);
-          prev_radar_scan_raw = radar_scan_raw;
-        }
+        solveICP(prev_radar_scan_inlier, radar_scan_inlier, radar_position_estimator_param, init_guess_pose);
+        prev_radar_scan_inlier = radar_scan_inlier;
       }
     }
   }
 
   foo_radar_scan_inlier = radar_scan_inlier;
-  foo_radar_scan_raw    = radar_scan_raw;
-
   pcl_vec_.clear();
   radar_scan_inlier.clear();
-  radar_scan_raw.clear();
   valid_targets.clear();
+
+  if (zupt_trigger)
+    return true;
+  else
+    return false;
 } // Process
 
 void RadarEstimator::setInlierRadarPcl(const std::vector<Vec3d> &pcl_vec) {
@@ -375,8 +360,9 @@ void RadarEstimator::solve3DODR(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_
 
 ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
                                       const pcl::PointCloud<incsl::RadarPointCloudType> &curr_pcl_msg,
-                                      const RadarPositionEstimatorParam                  radar_position_estimator_param,
+                                      const RadarPositionEstimatorParam                 &radar_position_estimator_param,
                                       const Mat4d                                       &init_guess_pose) {
+
   pcl::PointCloud<pcl::PointXYZ>::Ptr prev_(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::PointXYZ>::Ptr curr_(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -392,8 +378,6 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     pcl::PointCloud<incsl::RadarPointCloudType> prev_pcl_normalized_msg = normalizedPointCloud(prev_pcl_msg);
     pcl::PointCloud<incsl::RadarPointCloudType> curr_pcl_normalized_msg = normalizedPointCloud(curr_pcl_msg);
   }
-
-  // std::cout << prev_pcl_normalized_msg.size() << std::endl;
 
   for (std::size_t i = 0; i < prev_pcl_normalized_msg.points.size(); ++i) {
     prev_->at(i).x = prev_pcl_normalized_msg.points[i].x;
@@ -431,18 +415,19 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
 
   icp.align(*align, guess_pose);
 
-  const Mat4f  prev2curr = icp.getFinalTransformation().inverse();
+  const Mat4f  curr2prev = icp.getFinalTransformation().inverse();
   const double score     = icp.getFitnessScore();
 
-  const Mat4d prev2curr_ = prev2curr.cast<double>();
+  const Mat4d curr2prev_ = curr2prev.cast<double>();
 
   ICPTransform icp_results;
-  icp_results.rotation               = Mat3d::Zero();
-  icp_results.translation            = Vec3d::Zero();
-  icp_results.homo                   = Mat4d::Identity();
-  icp_results.score                  = 0.0;
-  icp_results.rotation               = prev2curr_.block<3, 3>(0, 0);
-  icp_results.translation            = prev2curr_.block<3, 1>(0, 3);
+  icp_results.rotation    = Mat3d::Zero();
+  icp_results.translation = Vec3d::Zero();
+  icp_results.homo        = Mat4d::Identity();
+  icp_results.score       = 0.0;
+
+  icp_results.rotation               = curr2prev_.block<3, 3>(0, 0);
+  icp_results.translation            = curr2prev_.block<3, 1>(0, 3);
   icp_results.homo.block<3, 3>(0, 0) = trans.rotation;
   icp_results.homo.block<3, 1>(0, 3) = icp_results.translation;
   icp_results.score                  = score;
@@ -454,22 +439,40 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     std::cout << "ICP not Converged" << std::endl;
   }
 
+  double tuning;
+  if (icp_results.score <= 0.1)
+    tuning = 1.0;
+  else if (icp_results.score <= 5.0)
+    tuning = 2.0;
+  else if (icp_results.score <= 10.0)
+    tuning = 3.0;
+  else
+    tuning = 10.0;
+
+  // clang-format off
+  icp_results.P_vec << 1.5  * icp_results.score,
+                       2.5  * icp_results.score,
+                       40.0 * icp_results.score;
+  icp_results.P_vec = tuning * icp_results.P_vec;
+  // clang-format on
+
   //  NOTE: this transform is for "only radar localization"
-  Mat4d curr_trans = prev_trans * prev2curr_;
+  const bool radarOdom = false;
+  if (radarOdom) {
+    Mat4d curr_trans = prev_trans * curr2prev_;
+    prev_trans       = curr_trans;
 
-  prev_trans = curr_trans;
-
-  trans.rotation               = Mat3d::Zero();
-  trans.translation            = Vec3d::Zero();
-  trans.homo                   = Mat4d::Identity();
-  trans.score                  = 0.0;
-  trans.rotation               = prev2curr_.block<3, 3>(0, 0);
-  trans.translation            = prev2curr_.block<3, 1>(0, 3);
-  trans.homo.block<3, 3>(0, 0) = trans.rotation;
-  trans.homo.block<3, 1>(0, 3) = trans.translation;
-  trans.score                  = score;
-  trans.number_of_points       = curr_pcl_normalized_msg.points.size();
-
+    trans.rotation               = Mat3d::Zero();
+    trans.translation            = Vec3d::Zero();
+    trans.homo                   = Mat4d::Identity();
+    trans.score                  = 0.0;
+    trans.rotation               = curr2prev_.block<3, 3>(0, 0);
+    trans.translation            = curr2prev_.block<3, 1>(0, 3);
+    trans.homo.block<3, 3>(0, 0) = trans.rotation;
+    trans.homo.block<3, 1>(0, 3) = trans.translation;
+    trans.score                  = score;
+    trans.number_of_points       = curr_pcl_normalized_msg.points.size();
+  }
   return icp_results;
 } // solveICP
 
@@ -543,8 +546,5 @@ RadarPointCloudType RadarEstimator::toRadarPointCloudType(const Vec11d &item, co
 pcl::PointCloud<RadarPointCloudType> RadarEstimator::getRadarScanInlier() {
   return foo_radar_scan_inlier;
 } // getRadarScanInlier
-
-pcl::PointCloud<RadarPointCloudType> RadarEstimator::getRadarScanRaw() { return foo_radar_scan_raw; }
-// getRadarScanRaw
 
 } // namespace incsl

@@ -151,7 +151,9 @@ void EkfRio::TimeUpdate(const Vec3d &f_b) {
   covariance_matrix.posteriori = covariance_matrix.priori;
 } // void TimeUpdate
 
-void EkfRio::MeasurementUpdateRadar(const Vec3d &r_radar, const MatXd &H_radar) {
+bool EkfRio::MeasurementUpdateRadar(const Vec3d &r_radar, const MatXd &H_radar, const Vec3d &v_r_r,
+                                    const RadarVelocityEstimatorParam radar_velocity_estimator_param_,
+                                    const bool                        outlier_reject) {
   const Mat3d R_discrete_radar = noise_covariance_matrix.R_radar;
   const Mat3d S_radar          = H_radar * covariance_matrix.priori * H_radar.transpose() + R_discrete_radar;
 
@@ -159,12 +161,39 @@ void EkfRio::MeasurementUpdateRadar(const Vec3d &r_radar, const MatXd &H_radar) 
   VecXd       error_state_radar_ = VecXd::Zero(15, 1);
   error_state_radar_             = K_radar * r_radar;
 
-  covariance_matrix.posteriori = (Mat15d::Identity() - K_radar * H_radar) * covariance_matrix.priori *
-                                     (Mat15d::Identity() - K_radar * H_radar).transpose() +
-                                 K_radar * R_discrete_radar * K_radar.transpose();
-  covariance_matrix.posteriori = EnsurePSD(covariance_matrix.posteriori);
+  if (outlier_reject) {
+    const double gamma = r_radar.transpose() *
+                         (H_radar * covariance_matrix.posteriori * H_radar.transpose() + R_discrete_radar).inverse() *
+                         r_radar;
 
-  ErrorCorrection(error_state_radar_);
+    boost::math::chi_squared chiSquaredDist(3.0);
+
+    //  NOTE: Adaptive threshold for very low ZUPTs
+    const double outlier_percentil_radar_ = (v_r_r.norm() > 0.05)
+                                                ? radar_velocity_estimator_param_.outlier_percentil_radar
+                                                : radar_velocity_estimator_param_.outlier_percentil_radar / 100.0;
+
+    const double gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - outlier_percentil_radar_);
+
+    if (gamma < gamma_thresh) {
+      covariance_matrix.posteriori = (Mat15d::Identity() - K_radar * H_radar) * covariance_matrix.priori *
+                                         (Mat15d::Identity() - K_radar * H_radar).transpose() +
+                                     K_radar * R_discrete_radar * K_radar.transpose();
+      covariance_matrix.posteriori = EnsurePSD(covariance_matrix.posteriori);
+
+      ErrorCorrection(error_state_radar_);
+      return true;
+    } else
+      return false;
+  } else {
+    covariance_matrix.posteriori = (Mat15d::Identity() - K_radar * H_radar) * covariance_matrix.priori *
+                                       (Mat15d::Identity() - K_radar * H_radar).transpose() +
+                                   K_radar * R_discrete_radar * K_radar.transpose();
+    covariance_matrix.posteriori = EnsurePSD(covariance_matrix.posteriori);
+
+    ErrorCorrection(error_state_radar_);
+    return true;
+  }
 } // void MeasurementUpdateRadar
 
 void EkfRio::ErrorCorrection(const Vec15d &error_state_) {

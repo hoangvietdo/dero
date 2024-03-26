@@ -24,6 +24,8 @@
 #include <dero/math_tools.hpp>
 #include <dero/nav_convert.hpp>
 
+#include <boost/math/distributions/chi_squared.hpp>
+
 namespace incsl {
 
 class EkfRio {
@@ -33,8 +35,11 @@ class EkfRio {
     void InitializeState(const std::vector<sensor_msgs::msg::Imu> &imu_buff);
     void ImuMechanization(const sensor_msgs::msg::Imu &imu_msg);
     void TimeUpdate(const Vec3d &f_b);
-    void MeasurementUpdateRadar(const Vec3d &r, const MatXd &H);
     void ErrorCorrection(const Vec15d &error_state_);
+
+    bool MeasurementUpdateRadar(const Vec3d &r_radar, const MatXd &H_radar, const Vec3d &v_r_r,
+                                const RadarVelocityEstimatorParam radar_velocity_estimator_param_,
+                                const bool                        outlier_reject);
 
     double getGravityValue();
     double getImuDt();

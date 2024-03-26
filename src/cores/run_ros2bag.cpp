@@ -592,6 +592,7 @@ void RunRos2Bag::ShutdownHandler() {
   RCLCPP_INFO_ONCE(this->get_logger(), "Finished simulation!");
   RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Rejected %d / %d", radar_reject, radar_valid);
   RCLCPP_INFO_ONCE(this->get_logger(), "Accel: Rejected %d / %d", accel_reject, accel_valid);
+  RCLCPP_INFO_ONCE(this->get_logger(), "ICP: Rejected %d / %d", icp_reject, icp_valid);
 
   if (!use_dr_structure) {
     state_ = ekf_rio_.getState();
@@ -599,16 +600,22 @@ void RunRos2Bag::ShutdownHandler() {
     state_ = scekf_dero_.getState();
   }
 
+  // clang-format off
   RCLCPP_INFO_ONCE(this->get_logger(), "Final Position [X, Y, Z] is [%.2f, %.2f, %.2f] (m)", state_.position(0, 0),
-                   state_.position(1, 0), state_.position(2, 0));
+                                                                                             state_.position(1, 0),
+                                                                                             state_.position(2, 0));
   RCLCPP_INFO_ONCE(this->get_logger(), "Final distance error w.r.t the origin is %.2f (m)",
                    std::sqrt(state_.position(0, 0) * state_.position(0, 0) +
                              state_.position(1, 0) * state_.position(1, 0) +
                              state_.position(2, 0) * state_.position(2, 0)));
   RCLCPP_INFO_ONCE(this->get_logger(), "Final Gyro Bias [X, Y, Z] is [%.2f, %.2f, %.2f] (deg/s)",
-                   state_.gyro_bias(0, 0) * R2D, state_.gyro_bias(1, 0) * R2D, state_.gyro_bias(2, 0) * R2D);
+                   state_.gyro_bias(0, 0) * R2D,
+                   state_.gyro_bias(1, 0) * R2D,
+                   state_.gyro_bias(2, 0) * R2D);
   RCLCPP_INFO_ONCE(this->get_logger(), "Final Radar Scale [X, Y, Z] is [%.2f, %.2f, %.2f]", state_.radar_scale(0, 0),
-                   state_.radar_scale(1, 0), state_.radar_scale(2, 0));
+                                                                                            state_.radar_scale(1, 0),
+                                                                                            state_.radar_scale(2, 0));
+  // clang-format on
 
   rclcpp::shutdown();
 } // void ShutdownHandler
@@ -650,11 +657,15 @@ void RunRos2Bag::Run() {
     if (!queue_imu_buff.empty()) {
       imu_buff.emplace_back(queue_imu_buff.front());
 
-      w_b_raw << imu_buff.front().angular_velocity.x, imu_buff.front().angular_velocity.y,
-          imu_buff.front().angular_velocity.z;
+      // clang-format off
+      w_b_raw << imu_buff.front().angular_velocity.x,
+                 imu_buff.front().angular_velocity.y,
+                 imu_buff.front().angular_velocity.z;
 
-      f_b_raw << imu_buff.front().linear_acceleration.x, imu_buff.front().linear_acceleration.y,
-          imu_buff.front().linear_acceleration.z;
+      f_b_raw << imu_buff.front().linear_acceleration.x,
+                 imu_buff.front().linear_acceleration.y,
+                 imu_buff.front().linear_acceleration.z;
+      // clang-format on
 
       if (!ekf_rio_init_) {
         RCLCPP_INFO_ONCE(this->get_logger(), "Gathering IMU data for coarse alingment algorithm and initialization...");
@@ -753,8 +764,9 @@ void RunRos2Bag::Run() {
 
       } else {
         radar_valid += 1;
-        radar_estimator_.Process(radar_buff.front(), radar_velocity_estimator_param_, radar_position_estimator_param_,
-                                 icp_init_pose, use_dr_structure);
+        const bool zupt_trigger =
+            radar_estimator_.Process(radar_buff.front(), radar_velocity_estimator_param_,
+                                     radar_position_estimator_param_, icp_init_pose, use_dr_structure);
 
         if (!use_dr_structure) {
           RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as an aided sensor!");
@@ -784,38 +796,13 @@ void RunRos2Bag::Run() {
           Vec3d v_r_r = radar_estimator_.getEgoVelocity();
           r_radar     = v_r_r_est - v_r_r;
 
-          if (radar_outlier_reject) {
-            covariance_matrix_ = ekf_rio_.getCovarianceMatrix();
-            const double gamma = r_radar.transpose() *
-                                 (H_radar * covariance_matrix_.posteriori * H_radar.transpose() +
-                                  radar_estimator_.getEgoVelocityCovariance())
-                                     .inverse() *
-                                 r_radar;
-
-            boost::math::chi_squared chiSquaredDist(3.0);
-
-            //  NOTE: Adaptive threshold for very low ZUPTs
-            const double outlier_percentil_radar_ =
-                (v_r_r.norm() > 0.05) ? radar_velocity_estimator_param_.outlier_percentil_radar
-                                      : radar_velocity_estimator_param_.outlier_percentil_radar / 100.0;
-
-            if (1) {
-              const double gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - outlier_percentil_radar_);
-
-              if (gamma < gamma_thresh) {
-                ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar);
-                measurement_update_radar_trigger = true;
-              } else {
-                radar_reject += 1;
-                // RCLCPP_WARN(this->get_logger(), "EKF: Measurement update step is rejected due to radar's outlier!");
-              }
-            } else {
-              ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar);
-              measurement_update_radar_trigger = true;
-            }
-          } else {
-            ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar);
+          if (ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar, v_r_r, radar_velocity_estimator_param_,
+                                              radar_outlier_reject))
             measurement_update_radar_trigger = true;
+          else {
+            // RCLCPP_WARN(this->get_logger(),
+            // "EKF: Measurement update step is rejected due to radar failed Chi-squared test!");
+            radar_reject += 1;
           }
         } else {
           RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as a core sensor!");
@@ -844,14 +831,21 @@ void RunRos2Bag::Run() {
               icp_init                = true;
 
             } else if (window_count == cloning_window_size && icp_init) {
-              end_radar_scan_inlier = radar_estimator_.getRadarScanInlier();
+              icp_valid             += 1;
+              end_radar_scan_inlier  = radar_estimator_.getRadarScanInlier();
 
               ICPTransform icp_meas = radar_estimator_.solveICP(first_radar_scan_inlier, end_radar_scan_inlier,
                                                                 radar_position_estimator_param_, icp_init_pose);
 
-              scekf_dero_.RadarMeasurementUpdate(imu_radar_calibration_, icp_meas);
-              measurement_update_radar_trigger = true;
-              window_count                     = 1;
+              if (scekf_dero_.RadarMeasurementUpdate(imu_radar_calibration_, icp_meas, radar_outlier_reject,
+                                                     zupt_trigger))
+                measurement_update_radar_trigger = true;
+              else {
+                // RCLCPP_WARN(this->get_logger(),
+                // "EKF: Measurement update step is rejected due to ICP failed Chi-squared test!");
+                icp_reject += 1;
+              }
+              window_count = 1;
             }
             window_count += 1;
           }
@@ -899,30 +893,12 @@ void RunRos2Bag::Run() {
               H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta), -std::sin(psi) / std::cos(theta),
                   std::sin(psi), -std::cos(psi);
 
-              if (accel_outlier_reject) {
-                const CovarianceMatrixCloning foo_covariance_matrix_cloning_ = scekf_dero_.getCovarianceMatrix();
-                covariance_matrix_dr_.posteriori = foo_covariance_matrix_cloning_.posteriori.block<12, 12>(0, 0);
-
-                const double gamma =
-                    r_accel.transpose() *
-                    (H_accel * covariance_matrix_dr_.posteriori * H_accel.transpose() + scekf_dero_.getR_Accel())
-                        .inverse() *
-                    r_accel;
-
-                boost::math::chi_squared chiSquaredDist(1.0);
-                const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.01);
-
-                if (gamma < gamma_thresh) {
-                  scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel);
-                  measurement_update_accel_trigger = true;
-                } else {
-                  // RCLCPP_WARN(this->get_logger(), "EKF: Measurement update step is rejected due to accelerometer
-                  // outlier!");
-                  accel_reject += 1;
-                }
-              } else {
-                scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel);
+              if (scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel, true))
                 measurement_update_accel_trigger = true;
+              else {
+                // RCLCPP_WARN(this->get_logger(),
+                // "EKF: Measurement update step is rejected due to accelerometer failed Chi-squared test!");
+                accel_reject += 1;
               }
             }
           }

@@ -41,11 +41,11 @@ def generate_launch_description():
     imu_radar_position_offset_y_arg   = DeclareLaunchArgument('imu_radar_position_offset_y',   default_value = '0.0824799',     description = '')
     imu_radar_position_offset_z_arg   = DeclareLaunchArgument('imu_radar_position_offset_z',   default_value = '0.0725244',     description = '')
 
-    imu_radar_quaternion_offset_w_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_w', default_value = '0.931373',  description = '')
+    imu_radar_quaternion_offset_w_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_w', default_value = '0.931373',    description = '')
     imu_radar_quaternion_offset_x_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_x', default_value = '-0.00565244', description = '')
     imu_radar_quaternion_offset_y_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_y', default_value = '0.00910475',  description = '')
-    imu_radar_quaternion_offset_z_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_z', default_value = '-0.363908', description = '')
-    gravity_arg                       = DeclareLaunchArgument('gravity',                       default_value = '9.81',     description = '')
+    imu_radar_quaternion_offset_z_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_z', default_value = '-0.363908',   description = '')
+    gravity_arg                       = DeclareLaunchArgument('gravity',                       default_value = '9.81',        description = '')
 
     # EKF parameter
     P_init_position_arg               = DeclareLaunchArgument('P_init_position',               default_value = '1.0e-8',   description = 'standard deviation')
@@ -68,9 +68,9 @@ def generate_launch_description():
     use_cloining_arg                  = DeclareLaunchArgument('use_cloning',                   default_value = 'true',    description = '')
     imu_only_arg                      = DeclareLaunchArgument('imu_only',                      default_value = 'false',   description = '')
     groundtruth_included_arg          = DeclareLaunchArgument('groundtruth_included',          default_value = 'false',   description = '')
-    radar_outlier_reject_arg          = DeclareLaunchArgument('radar_outlier_reject',          default_value = 'false',    description = '')
+    radar_outlier_reject_arg          = DeclareLaunchArgument('radar_outlier_reject',          default_value = 'true',    description = '')
     ros2_pub_rate_arg                 = DeclareLaunchArgument('ros2_pub_rate',                 default_value = '30',      description = 'Hz')
-    coarse_alignment_window_size_arg  = DeclareLaunchArgument('coarse_alignment_window_size',  default_value = '11900',    description = '')
+    coarse_alignment_window_size_arg  = DeclareLaunchArgument('coarse_alignment_window_size',  default_value = '11900',   description = '')
 
     # Radar parameter
     min_distance_arg                  = DeclareLaunchArgument('min_distance',                  default_value = '0.25',     description = '')
@@ -112,11 +112,11 @@ def generate_launch_description():
 
     max_corres_dis_arg                = DeclareLaunchArgument('max_corres_dis',                default_value = '4.0',          description = '')
     max_iter_arg                      = DeclareLaunchArgument('max_iter',                      default_value = '500',          description = '')
-    transform_eps_arg                 = DeclareLaunchArgument('transform_eps',                 default_value = '0.00000001',    description = '')
-    euclidean_fit_eps_arg             = DeclareLaunchArgument('euclidean_fit_eps',             default_value = '0.00000001',    description = '')
+    transform_eps_arg                 = DeclareLaunchArgument('transform_eps',                 default_value = '0.00000001',   description = '')
+    euclidean_fit_eps_arg             = DeclareLaunchArgument('euclidean_fit_eps',             default_value = '0.00000001',   description = '')
     cloning_window_size_arg           = DeclareLaunchArgument('cloning_window_size',           default_value = '3',            description = '')
     window_slicing_arg                = DeclareLaunchArgument('window_slicing',                default_value = 'false',        description = '')
-    ransac_outlier_reject_thres_arg   = DeclareLaunchArgument('ransac_outlier_reject_thres',   default_value = '0.01',          description = '')  
+    ransac_outlier_reject_thres_arg   = DeclareLaunchArgument('ransac_outlier_reject_thres',   default_value = '0.01',         description = '')  
 
     bag_dir_arg                       = DeclareLaunchArgument('bag_dir',
     default_value = '/home/vietdo/Downloads/radar_inertial_datasets_icins_2021/carried_datasets/carried_3/carried_3.db3', description = '');

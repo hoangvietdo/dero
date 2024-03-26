@@ -25,19 +25,19 @@
 #include <dero/radar_point_cloud.hpp>
 #include <dero/variable_define.hpp>
 
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/conversions.h>
 #include <pcl/pcl_macros.h>
+#include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/ndt.h>
 
 #include <pcl_conversions/pcl_conversions.h>
-
-#include "sensor_msgs/point_cloud2_iterator.hpp"
 
 // clang-format off
 POINT_CLOUD_REGISTER_POINT_STRUCT(incsl::RadarPointCloudType,
@@ -66,13 +66,13 @@ class RadarEstimator {
   public:
     RadarEstimator();
 
-    void Process(const sensor_msgs::msg::PointCloud2 &radar_msg, const RadarVelocityEstimatorParam param,
+    bool Process(const sensor_msgs::msg::PointCloud2 &radar_msg, const RadarVelocityEstimatorParam param,
                  const RadarPositionEstimatorParam radar_position_estimator_param, const Mat4d &init_guess_pose,
                  const bool &use_dr_structure);
 
     ICPTransform solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
                           const pcl::PointCloud<incsl::RadarPointCloudType> &curr_pcl_msg,
-                          const RadarPositionEstimatorParam                  radar_position_estimator_param,
+                          const RadarPositionEstimatorParam                 &radar_position_estimator_param,
                           const Mat4d                                       &init_guess_pose);
 
     Vec3d getEgoVelocity();
@@ -80,7 +80,6 @@ class RadarEstimator {
 
     ICPTransform                         getIcpTransform();
     pcl::PointCloud<RadarPointCloudType> getRadarScanInlier();
-    pcl::PointCloud<RadarPointCloudType> getRadarScanRaw();
 
     std::string getRadarInfo();
 
@@ -89,7 +88,8 @@ class RadarEstimator {
     std::vector<Vec3d>            pcl_vec_;
 
   private:
-    bool first_scan = true;
+    bool first_scan   = true;
+    bool zupt_trigger = true;
 
     Mat4d prev_trans = Mat4d::Identity();
     Mat4d trans_;
@@ -107,8 +107,6 @@ class RadarEstimator {
     std::vector<Vec11d> valid_targets;
     std::vector<Vec3d>  inlier_pcl_vec;
 
-    pcl::PointCloud<RadarPointCloudType> radar_scan_raw;
-    pcl::PointCloud<RadarPointCloudType> foo_radar_scan_raw;
     pcl::PointCloud<RadarPointCloudType> prev_radar_scan_raw;
     pcl::PointCloud<RadarPointCloudType> radar_scan_inlier;
     pcl::PointCloud<RadarPointCloudType> foo_radar_scan_inlier;

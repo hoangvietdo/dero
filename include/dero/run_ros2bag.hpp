@@ -40,6 +40,7 @@
 
 #include "tf2_ros/transform_broadcaster.h"
 
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 #include <sensor_msgs/msg/fluid_pressure.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -60,10 +61,6 @@
 #include <dero/radar_estimator.hpp>
 #include <dero/scekf_dero.hpp>
 #include <dero/variable_define.hpp>
-
-#include <boost/math/distributions/chi_squared.hpp>
-
-#include "sensor_msgs/point_cloud2_iterator.hpp"
 
 namespace incsl {
 
@@ -104,6 +101,8 @@ class RunRos2Bag : public rclcpp::Node {
     int max_iter_;
     int accel_reject = 0;
     int accel_valid  = 0;
+    int icp_reject   = 0;
+    int icp_valid    = 0;
     int viet         = 0;
     int radar_valid  = 0;
     int radar_reject = 0;

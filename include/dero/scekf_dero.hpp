@@ -26,6 +26,8 @@
 #include <dero/nav_convert.hpp>
 #include <dero/radar_estimator.hpp>
 
+#include <boost/math/distributions/chi_squared.hpp>
+
 namespace incsl {
 
 class ScEkfDero {
@@ -40,8 +42,10 @@ class ScEkfDero {
     void RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCalibrationParam &imu_radar_calibration_,
                          const bool &use_cloning, const int &window_size);
 
-    void RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas);
-    void MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel);
+    bool RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
+                                const bool &outlier_reject, const bool &zupt_trigger);
+
+    bool MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel, const bool &outlier_reject);
 
     void   ErrorCorrection(const VecXd &error_state_);
     double getGravityValue();

@@ -195,6 +195,7 @@ typedef struct {
     Vec3d  translation;
     double score;
     size_t number_of_points;
+    Vec3d  P_vec;
 } ICPTransform;
 
 } // namespace incsl

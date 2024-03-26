@@ -11,7 +11,7 @@ This is a ROS package for DeRO, written in C++. DeRO utilizes 4D point cloud mea
 
 
 ## 2. Prerequisites
-- Ubuntu 20.04
+- Ubuntu 20.04.
 - [ROS2 Foxy](https://docs.ros.org/en/foxy/Installation.html).
 - Open-source datasets for reproducing the paper's results can be downloaded from [here](https://christopherdoer.github.io/datasets/icins_2021_radar_inertial_odometry).
 - This package was tested with ```C++14``` and ```PCL 1.10.0```.

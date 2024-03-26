@@ -41,11 +41,11 @@ def generate_launch_description():
     imu_radar_position_offset_y_arg   = DeclareLaunchArgument('imu_radar_position_offset_y',   default_value = '0.0824799',     description = '')
     imu_radar_position_offset_z_arg   = DeclareLaunchArgument('imu_radar_position_offset_z',   default_value = '0.0725244',     description = '')
 
-    imu_radar_quaternion_offset_w_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_w', default_value = '0.931373',  description = '')
+    imu_radar_quaternion_offset_w_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_w', default_value = '0.931373',    description = '')
     imu_radar_quaternion_offset_x_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_x', default_value = '-0.00565244', description = '')
     imu_radar_quaternion_offset_y_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_y', default_value = '0.00910475',  description = '')
-    imu_radar_quaternion_offset_z_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_z', default_value = '-0.363908', description = '')
-    gravity_arg                       = DeclareLaunchArgument('gravity',                       default_value = '9.81',     description = '')
+    imu_radar_quaternion_offset_z_arg = DeclareLaunchArgument('imu_radar_quaternion_offset_z', default_value = '-0.363908',   description = '')
+    gravity_arg                       = DeclareLaunchArgument('gravity',                       default_value = '9.81',        description = '')
 
     # EKF parameter
     P_init_position_arg               = DeclareLaunchArgument('P_init_position',               default_value = '1.0e-8',   description = 'standard deviation')
@@ -68,9 +68,9 @@ def generate_launch_description():
     use_cloining_arg                  = DeclareLaunchArgument('use_cloning',                   default_value = 'false',    description = '')
     imu_only_arg                      = DeclareLaunchArgument('imu_only',                      default_value = 'false',    description = '')
     groundtruth_included_arg          = DeclareLaunchArgument('groundtruth_included',          default_value = 'false',    description = '')
-    radar_outlier_reject_arg          = DeclareLaunchArgument('radar_outlier_reject',          default_value = 'false',    description = '')
-    ros2_pub_rate_arg                 = DeclareLaunchArgument('ros2_pub_rate',                 default_value = '30',      description = 'Hz')
-    coarse_alignment_window_size_arg  = DeclareLaunchArgument('coarse_alignment_window_size',  default_value = '5000',    description = '')
+    radar_outlier_reject_arg          = DeclareLaunchArgument('radar_outlier_reject',          default_value = 'true',     description = '')
+    ros2_pub_rate_arg                 = DeclareLaunchArgument('ros2_pub_rate',                 default_value = '30',       description = 'Hz')
+    coarse_alignment_window_size_arg  = DeclareLaunchArgument('coarse_alignment_window_size',  default_value = '5000',     description = '')
 
     # Radar parameter
     min_distance_arg                  = DeclareLaunchArgument('min_distance',                  default_value = '0.25',     description = '')
@@ -79,8 +79,8 @@ def generate_launch_description():
     elevation_threshold_arg           = DeclareLaunchArgument('elevation_threshold',           default_value = '60.0',     description = '')
     azimuth_threshold_arg             = DeclareLaunchArgument('azimuth_threshold',             default_value = '60.0',     description = '')
     velocity_correction_factor_arg    = DeclareLaunchArgument('velocity_correction_factor',    default_value = '1.0',      description = '')
-    filter_min_z_arg                  = DeclareLaunchArgument('filter_min_z',                  default_value = '-100.0',     description = '')
-    filter_max_z_arg                  = DeclareLaunchArgument('filter_max_z',                  default_value = '100.0',      description = '')
+    filter_min_z_arg                  = DeclareLaunchArgument('filter_min_z',                  default_value = '-100.0',   description = '')
+    filter_max_z_arg                  = DeclareLaunchArgument('filter_max_z',                  default_value = '100.0',    description = '')
     zero_velocity_threshold_arg       = DeclareLaunchArgument('zero_velocity_threshold',       default_value = '0.05',     description = '')
     sigma_zero_velocity_x_arg         = DeclareLaunchArgument('sigma_zero_velocity_x',         default_value = '0.025',    description = '')
     sigma_zero_velocity_y_arg         = DeclareLaunchArgument('sigma_zero_velocity_y',         default_value = '0.025',    description = '')
@@ -94,7 +94,7 @@ def generate_launch_description():
 
     use_ransac_arg                    = DeclareLaunchArgument('use_ransac',                    default_value = 'true',     description = '')
     outlier_prob_arg                  = DeclareLaunchArgument('outlier_prob',                  default_value = '0.5',      description = '')
-    success_prob_arg                  = DeclareLaunchArgument('success_prob',                  default_value = '0.99999',    description = '')
+    success_prob_arg                  = DeclareLaunchArgument('success_prob',                  default_value = '0.99999',  description = '')
     N_ransac_points_arg               = DeclareLaunchArgument('N_ransac_points',               default_value = '3',        description = '')
     inlier_threshold_arg              = DeclareLaunchArgument('inlier_threshold',              default_value = '0.15',     description = '')
 
@@ -103,7 +103,7 @@ def generate_launch_description():
     sigma_offset_radar_z_arg          = DeclareLaunchArgument('sigma_offset_radar_z',          default_value = '0.075',    description = '')
     outlier_percentil_radar_arg       = DeclareLaunchArgument('outlier_percentil_radar',       default_value = '0.1',      description = '')
 
-    use_odr_arg                       = DeclareLaunchArgument('use_odr',                       default_value = 'true',    description = '')
+    use_odr_arg                       = DeclareLaunchArgument('use_odr',                       default_value = 'true',     description = '')
     min_speed_odr_arg                 = DeclareLaunchArgument('min_speed_odr',                 default_value = '4.0',      description = '')
     sigma_v_d_arg                     = DeclareLaunchArgument('sigma_v_d',                     default_value = '0.125',    description = '')
     model_noise_offset_deg_arg        = DeclareLaunchArgument('model_noise_offset_deg',        default_value = '2.0',      description = 'degree')
@@ -112,9 +112,9 @@ def generate_launch_description():
 
     max_corres_dis_arg                = DeclareLaunchArgument('max_corres_dis',                default_value = '4.0',           description = '')
     max_iter_arg                      = DeclareLaunchArgument('max_iter',                      default_value = '500',           description = '')
-    transform_eps_arg                 = DeclareLaunchArgument('transform_eps',                 default_value = '0.0000001',           description = '')
-    euclidean_fit_eps_arg             = DeclareLaunchArgument('euclidean_fit_eps',             default_value = '0.0000001',           description = '')
-    cloning_window_size_arg           = DeclareLaunchArgument('cloning_window_size',           default_value = '3',            description = '')
+    transform_eps_arg                 = DeclareLaunchArgument('transform_eps',                 default_value = '0.0000001',     description = '')
+    euclidean_fit_eps_arg             = DeclareLaunchArgument('euclidean_fit_eps',             default_value = '0.0000001',     description = '')
+    cloning_window_size_arg           = DeclareLaunchArgument('cloning_window_size',           default_value = '3',             description = '')
     window_slicing_arg                = DeclareLaunchArgument('window_slicing',                default_value = 'false',         description = '')
     ransac_outlier_reject_thres_arg   = DeclareLaunchArgument('ransac_outlier_reject_thres',   default_value = '0.0',           description = '')  
 
