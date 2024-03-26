@@ -5,7 +5,7 @@
 - **March 5, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
 
 ## 1. Overview
-This is a ROS package for DeRO, written in C++. DeRO utilizes 4D point cloud measurements from a millimeter-wave Frequency-Modulated Continuous Wave (FMCW) radar and IMU measurements to estimate the robot's poses. Specifically, Doppler velocity and gyroscope measurements are used to calculate odometry, while the radar's range and accelerometer measurements are utilized to update the estimation using a Stochastic Cloning Extended Kalman Filter (SCEKF).
+This is a ROS 2 package for DeRO, written in C++. DeRO utilizes 4D point cloud measurements from a millimeter-wave Frequency-Modulated Continuous Wave (FMCW) radar and IMU measurements to estimate the robot's poses. Specifically, Doppler velocity and gyroscope measurements are used to calculate odometry, while the radar's range and accelerometer measurements are utilized to update the estimation using a Stochastic Cloning Extended Kalman Filter (SCEKF).
 
 <img src='images/vicon.png' width='400' height='300'>  <img src='images/carried_1.png' width='250' height='300'>
 
@@ -14,7 +14,7 @@ This is a ROS package for DeRO, written in C++. DeRO utilizes 4D point cloud mea
 - Ubuntu 20.04.
 - [ROS2 Foxy](https://docs.ros.org/en/foxy/Installation.html).
 - Open-source datasets for reproducing the paper's results can be downloaded from [here](https://christopherdoer.github.io/datasets/icins_2021_radar_inertial_odometry).
-- This package was tested with ```C++14``` and ```PCL 1.10.0```.
+- This package was tested with ```C++14```, ```PCL 1.10.0```, and ```Eigen 3.3.7```.
 
 ## 3. Build
 - Clone the repository and build:
@@ -23,7 +23,6 @@ mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/hoangvietdo/dero
 cd ..
-rosdep install --from-paths src --ignore-src -r -y
 colcon build
 ```
 
