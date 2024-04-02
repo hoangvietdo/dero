@@ -220,6 +220,9 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
 
 bool ScEkfDero::RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
                                        const bool &outlier_reject, const bool &zupt_trigger) {
+  if (icp_meas.score >= 5.0)
+    return false;
+
   //  NOTE: Measurement Update
   MatXd       H_cloning = MatXd::Zero(3, 18);
   const Mat3d foo_1     = imu_radar_calibration_.rotation_matrix;

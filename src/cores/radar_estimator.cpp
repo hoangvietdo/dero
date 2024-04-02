@@ -444,10 +444,6 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     tuning = 1.0;
   else if (icp_results.score <= 5.0)
     tuning = 2.0;
-  else if (icp_results.score <= 10.0)
-    tuning = 3.0;
-  else
-    tuning = 10.0;
 
   // clang-format off
   icp_results.P_vec << 1.5  * icp_results.score,

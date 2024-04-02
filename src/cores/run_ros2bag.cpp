@@ -285,9 +285,9 @@ void RunRos2Bag::LoadParameters() {
   RCLCPP_INFO_ONCE(this->get_logger(), "EKF's P initial std attitude Z is %e", P0_att_Z);
   RCLCPP_INFO_ONCE(this->get_logger(), "EKF's P initial std accel bias is %f", P0_ba);
   RCLCPP_INFO_ONCE(this->get_logger(), "EKF's P initial std gyro bias is %e", P0_bg);
-  RCLCPP_INFO_ONCE(this->get_logger(), "EKF's P initial std radar scale is %f", P0_br);
+  RCLCPP_INFO_ONCE(this->get_logger(), "EKF's P initial std radar scale is %e", P0_br);
 
-  RCLCPP_INFO_ONCE(this->get_logger(), "Radar scale factor random walk std is %f", radar_scale_rw_);
+  RCLCPP_INFO_ONCE(this->get_logger(), "Radar scale factor random walk std is %e", radar_scale_rw_);
   RCLCPP_INFO_ONCE(this->get_logger(), "Radar filter: min_distance is %.2f", min_distance_);
   RCLCPP_INFO_ONCE(this->get_logger(), "Radar filter: max_distance is %.2f", max_distance_);
   RCLCPP_INFO_ONCE(this->get_logger(), "Radar filter: min_db is %.2f", min_db_);
