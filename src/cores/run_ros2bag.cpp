@@ -5,7 +5,7 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// (at your option) any later version.
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -352,8 +352,6 @@ void RunRos2Bag::LoadParameters() {
 
   imu_radar_calibration_.rotation_matrix = offset_body_rot * quat2dcm(calib_quat_foo);
   imu_radar_calibration_.quaternion      = dcm2quat(imu_radar_calibration_.rotation_matrix);
-
-  icp_init_pose = Mat4d::Identity();
 
   RCLCPP_INFO_ONCE(this->get_logger(), "IMU-Radar position offset is [%.2f %.2f %.2f] (m)",
                    imu_radar_calibration_.position(0, 0), imu_radar_calibration_.position(1, 0),
@@ -763,10 +761,8 @@ void RunRos2Bag::Run() {
         radar_buff.clear();
 
       } else {
-        radar_valid += 1;
-        const bool zupt_trigger =
-            radar_estimator_.Process(radar_buff.front(), radar_velocity_estimator_param_,
-                                     radar_position_estimator_param_, icp_init_pose, use_dr_structure);
+        radar_valid             += 1;
+        const bool zupt_trigger  = radar_estimator_.Process(radar_buff.front(), radar_velocity_estimator_param_);
 
         if (!use_dr_structure) {
           RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as an aided sensor!");
@@ -826,28 +822,30 @@ void RunRos2Bag::Run() {
                                       imu_radar_calibration_, use_cloning, cloning_window_size);
 
           if (use_cloning) {
-            if (window_count == 1 && !icp_init) {
-              first_radar_scan_inlier = radar_estimator_.getRadarScanInlier();
-              icp_init                = true;
+            window_count += 1;
+            if (window_count == 1) {
+              first_window_radar_scan_inlier = radar_estimator_.getRadarScanInlier();
+              first_window                   = scekf_dero_.getState();
 
-            } else if (window_count == cloning_window_size && icp_init) {
+            } else if (window_count == cloning_window_size) {
               icp_valid             += 1;
               end_radar_scan_inlier  = radar_estimator_.getRadarScanInlier();
 
-              ICPTransform icp_meas = radar_estimator_.solveICP(first_radar_scan_inlier, end_radar_scan_inlier,
+              icp_init_pose = Mat4d::Identity();
+
+              ICPTransform icp_meas = radar_estimator_.solveICP(first_window_radar_scan_inlier, end_radar_scan_inlier,
                                                                 radar_position_estimator_param_, icp_init_pose);
 
               if (scekf_dero_.RadarMeasurementUpdate(imu_radar_calibration_, icp_meas, radar_outlier_reject,
-                                                     zupt_trigger))
+                                                     zupt_trigger, first_window)) {
                 measurement_update_radar_trigger = true;
-              else {
+              } else {
                 // RCLCPP_WARN(this->get_logger(),
                 // "EKF: Measurement update step is rejected due to ICP failed Chi-squared test!");
                 icp_reject += 1;
               }
-              window_count = 1;
+              window_count = 0;
             }
-            window_count += 1;
           }
 
           bool accel_update = true;
@@ -890,8 +888,11 @@ void RunRos2Bag::Run() {
               r_accel(0, 0) = phi - roll_;
               r_accel(1, 0) = theta - pitch_;
 
-              H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta), -std::sin(psi) / std::cos(theta),
-                  std::sin(psi), -std::cos(psi);
+              // clang-format off
+              H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta),
+                                           -std::sin(psi) / std::cos(theta),
+                                            std::sin(psi), -std::cos(psi);
+              // clang-format on
 
               if (scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel, true))
                 measurement_update_accel_trigger = true;

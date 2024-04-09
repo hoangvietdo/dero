@@ -5,7 +5,7 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// (at your option) any later version.
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -107,7 +107,7 @@ class RunRos2Bag : public rclcpp::Node {
     int radar_valid  = 0;
     int radar_reject = 0;
     int radar_skip   = 0;
-    int window_count = 1;
+    int window_count = 0;
 
     uint N_ransac_points_;
 
@@ -224,6 +224,7 @@ class RunRos2Bag : public rclcpp::Node {
     Init                        init_;
     Noise                       noise_;
     State                       state_;
+    State                       first_window;
     EkfRio                      ekf_rio_;
     ErrorState                  error_state_;
     ScEkfDero                   scekf_dero_;
@@ -240,7 +241,7 @@ class RunRos2Bag : public rclcpp::Node {
     RadarPositionEstimatorParam radar_position_estimator_param_;
     IMURadarCalibrationParam    imu_radar_calibration_;
 
-    pcl::PointCloud<RadarPointCloudType> first_radar_scan_inlier;
+    pcl::PointCloud<RadarPointCloudType> first_window_radar_scan_inlier;
     pcl::PointCloud<RadarPointCloudType> end_radar_scan_inlier;
 
     rclcpp::TimerBase::SharedPtr                                callback_timer_process_;

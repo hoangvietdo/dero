@@ -5,7 +5,7 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// (at your option) any later version.
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,7 +43,7 @@ class ScEkfDero {
                          const bool &use_cloning, const int &window_size);
 
     bool RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
-                                const bool &outlier_reject, const bool &zupt_trigger);
+                                const bool &outlier_reject, const bool &zupt_trigger, State &first_state);
 
     bool MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel, const bool &outlier_reject);
 
@@ -79,7 +79,7 @@ class ScEkfDero {
     void setR_Accel(const Vec2d &sigma_accel);
 
   private:
-    int window_count = 1;
+    int window_count = 0;
 
     Vec3d gravity;
     Vec3d euler_0;

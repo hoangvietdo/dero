@@ -5,7 +5,7 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// (at your option) any later version.
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,9 +25,7 @@ namespace incsl {
 RadarEstimator::RadarEstimator() {} // RadarVelocityEstimator
 
 bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg,
-                             const RadarVelocityEstimatorParam    param,
-                             const RadarPositionEstimatorParam    radar_position_estimator_param,
-                             const Mat4d &init_guess_pose, const bool &use_dr_structure) {
+                             const RadarVelocityEstimatorParam   &param) {
 
   auto                  radar_PCL_msg(new pcl::PointCloud<RadarPointCloudType>);
   std::set<std::string> fields;
@@ -84,7 +82,7 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
             -target.v_doppler_mps * param.velocity_correction_factor, target.noise_db;
         valid_targets.emplace_back(v);
       } // if p_stab.z()
-    } // if r > param.min_distance
+    }   // if r > param.min_distance
   }
 
   if (valid_targets.size() > 2) {
@@ -153,8 +151,8 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
         if (param.use_odr && v_r.norm() > param.min_speed_odr && radar_scan_inlier.size() > param.odr_inlier_threshold)
           solve3DODR(radar_data, v_r, P_v_r, param);
       } // if-else use_ransac
-    } // if median
-  } // if valid_targets
+    }   // if median
+  }     // if valid_targets
 
   setEgoVelocity(v_r);
   setEgoVelocityCovariance(P_v_r);
@@ -168,18 +166,6 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
 
   setInlierRadarRos2PCL2(inlier_radar_msg_);
   setInlierRadarPcl(pcl_vec_);
-
-  if (!radar_scan_inlier.empty()) {
-    if (use_dr_structure) {
-      if (first_scan) {
-        first_scan             = false;
-        prev_radar_scan_inlier = radar_scan_inlier;
-      } else {
-        solveICP(prev_radar_scan_inlier, radar_scan_inlier, radar_position_estimator_param, init_guess_pose);
-        prev_radar_scan_inlier = radar_scan_inlier;
-      }
-    }
-  }
 
   foo_radar_scan_inlier = radar_scan_inlier;
   pcl_vec_.clear();
@@ -355,7 +341,6 @@ void RadarEstimator::solve3DODR(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_
     std::cout << "ODR: Success" << std::endl;
   else
     std::cout << "ODR: Failed" << std::endl;
-
 } // solve3DODR
 
 ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
@@ -415,55 +400,80 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
 
   icp.align(*align, guess_pose);
 
-  const Mat4f  curr2prev = icp.getFinalTransformation().inverse();
+  const Mat4f  prev2curr = icp.getFinalTransformation();
   const double score     = icp.getFitnessScore();
 
-  const Mat4d curr2prev_ = curr2prev.cast<double>();
+  const Mat4d prev2curr_       = prev2curr.cast<double>();
+  Mat4d       curr2prev_       = Mat4d::Identity();
+  curr2prev_.block<3, 3>(0, 0) = prev2curr_.block<3, 3>(0, 0).transpose();
+  curr2prev_.block<3, 1>(0, 3) = -prev2curr_.block<3, 3>(0, 0).transpose() * prev2curr_.block<3, 1>(0, 3);
 
   ICPTransform icp_results;
-  icp_results.rotation    = Mat3d::Zero();
+  icp_results.rotation    = Mat3d::Identity();
   icp_results.translation = Vec3d::Zero();
   icp_results.homo        = Mat4d::Identity();
   icp_results.score       = 0.0;
 
   icp_results.rotation               = curr2prev_.block<3, 3>(0, 0);
   icp_results.translation            = curr2prev_.block<3, 1>(0, 3);
-  icp_results.homo.block<3, 3>(0, 0) = trans.rotation;
+  icp_results.homo.block<3, 3>(0, 0) = icp_results.rotation;
   icp_results.homo.block<3, 1>(0, 3) = icp_results.translation;
   icp_results.score                  = score;
   icp_results.number_of_points       = curr_pcl_normalized_msg.points.size();
 
   bool is_converged = icp.hasConverged();
-  if (is_converged) {
-  } else {
-    std::cout << "ICP not Converged" << std::endl;
+  if (!is_converged) {
+    icp_results.score = 10; // any number that >=5 will reject ICP estimation
   }
 
-  double tuning;
-  if (icp_results.score <= 0.1)
-    tuning = 1.0;
-  else if (icp_results.score <= 5.0)
-    tuning = 2.0;
+  pcl::CorrespondencesPtr corresps(new pcl::Correspondences);
 
-  // clang-format off
-  icp_results.P_vec << 1.5  * icp_results.score,
-                       2.5  * icp_results.score,
-                       40.0 * icp_results.score;
-  icp_results.P_vec = tuning * icp_results.P_vec;
-  // clang-format on
+  pcl::registration::CorrespondenceEstimation<pcl::PointXYZ, pcl::PointXYZ> corresp_est;
+  corresp_est.setInputSource(align);
+  corresp_est.setInputTarget(curr_);
+  corresp_est.determineCorrespondences(*corresps, radar_position_estimator_param.max_corres_dis);
+
+  double sum_x        = 0.0;
+  double sum_y        = 0.0;
+  double sum_z        = 0.0;
+  double m_sqrt_sum_x = 0.0;
+  double m_sqrt_sum_y = 0.0;
+  double m_sqrt_sum_z = 0.0;
+
+  for (std::size_t i = 0; i < corresps->size(); ++i) {
+    const int idx_source = corresps->at(i).index_query;
+    const int idx_target = corresps->at(i).index_match;
+
+    const double foo_x  = curr_->at(idx_target).x - align->at(idx_source).x;
+    const double foo_y  = curr_->at(idx_target).y - align->at(idx_source).y;
+    const double foo_z  = curr_->at(idx_target).z - align->at(idx_source).z;
+    sum_x              += (foo_x * foo_x);
+    sum_y              += (foo_y * foo_y);
+    sum_z              += (foo_z * foo_z);
+  }
+
+  const double N = static_cast<double>(corresps->size());
+  m_sqrt_sum_x   = std::sqrt(sum_x) / N;
+  m_sqrt_sum_y   = std::sqrt(sum_y) / N;
+  m_sqrt_sum_z   = std::sqrt(sum_z) / N;
+
+  const double sum  = sum_x + sum_y + sum_z;
+  icp_results.P_vec = Vec3d::Zero();
+  icp_results.P_vec << 1.5 * m_sqrt_sum_x, 2.5 * m_sqrt_sum_y, 300 * m_sqrt_sum_z;
+  icp_results.P_vec = icp_results.score * icp_results.P_vec / sum;
 
   //  NOTE: this transform is for "only radar localization"
   const bool radarOdom = false;
   if (radarOdom) {
-    Mat4d curr_trans = prev_trans * curr2prev_;
+    Mat4d curr_trans = prev_trans * prev2curr_;
     prev_trans       = curr_trans;
 
-    trans.rotation               = Mat3d::Zero();
+    trans.rotation               = Mat3d::Identity();
     trans.translation            = Vec3d::Zero();
     trans.homo                   = Mat4d::Identity();
     trans.score                  = 0.0;
-    trans.rotation               = curr2prev_.block<3, 3>(0, 0);
-    trans.translation            = curr2prev_.block<3, 1>(0, 3);
+    trans.rotation               = curr_trans.block<3, 3>(0, 0);
+    trans.translation            = curr_trans.block<3, 1>(0, 3);
     trans.homo.block<3, 3>(0, 0) = trans.rotation;
     trans.homo.block<3, 1>(0, 3) = trans.translation;
     trans.score                  = score;

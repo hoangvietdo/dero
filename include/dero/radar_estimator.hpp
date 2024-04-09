@@ -5,7 +5,7 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// (at your option) any later version.
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -66,9 +66,7 @@ class RadarEstimator {
   public:
     RadarEstimator();
 
-    bool Process(const sensor_msgs::msg::PointCloud2 &radar_msg, const RadarVelocityEstimatorParam param,
-                 const RadarPositionEstimatorParam radar_position_estimator_param, const Mat4d &init_guess_pose,
-                 const bool &use_dr_structure);
+    bool Process(const sensor_msgs::msg::PointCloud2 &radar_msg, const RadarVelocityEstimatorParam &param);
 
     ICPTransform solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
                           const pcl::PointCloud<incsl::RadarPointCloudType> &curr_pcl_msg,
