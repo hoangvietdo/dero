@@ -54,13 +54,13 @@ def generate_launch_description():
     P_init_attitude_Z_arg             = DeclareLaunchArgument('P_init_attitude_Z',             default_value = '1.0e-8',   description = 'standard deviation')
     P_init_accel_bias_arg             = DeclareLaunchArgument('P_init_accel_bias',             default_value = '0.02',     description = 'standard deviation')
     P_init_gyro_bias_arg              = DeclareLaunchArgument('P_init_gyro_bias',              default_value = '5.2360e-8',description = 'standard deviation')
-    P_init_radar_scale_arg            = DeclareLaunchArgument('P_init_radar_scale',            default_value = '1.0e-2',   description = 'standard deviation')
+    P_init_radar_scale_arg            = DeclareLaunchArgument('P_init_radar_scale',            default_value = '1.0e-8',   description = 'standard deviation')
     
     velocity_random_walk_arg          = DeclareLaunchArgument('velocity_random_walk',          default_value = '0.03',     description = 'standard deviation')
     angular_random_walk_arg           = DeclareLaunchArgument('angular_random_walk',           default_value = '0.0035',   description = 'standard deviation')
     accel_bias_random_walk_arg        = DeclareLaunchArgument('accel_bias_random_walk',        default_value = '0.00001',  description = 'standard deviation')
     gyro_bias_random_walk_arg         = DeclareLaunchArgument('gyro_bias_random_walk',         default_value = '1.7453e-7',description = 'standard deviation')
-    radar_scale_random_walk_arg       = DeclareLaunchArgument('radar_scale_random_walk',       default_value = '0.0000001',description = 'standard deviation')
+    radar_scale_random_walk_arg       = DeclareLaunchArgument('radar_scale_random_walk',       default_value = '1.0e-7',description = 'standard deviation')
 
     # Simulation scenario
     use_radar_arg                     = DeclareLaunchArgument('use_radar',                     default_value = 'true',    description = '')
@@ -110,7 +110,7 @@ def generate_launch_description():
     model_noise_scale_deg_arg         = DeclareLaunchArgument('model_noise_scale_deg',         default_value = '10.0',     description = 'degree')
     odr_inlier_threshold_arg          = DeclareLaunchArgument('odr_inlier_threshold',          default_value = '10',       description = '')
 
-    max_corres_dis_arg                = DeclareLaunchArgument('max_corres_dis',                default_value = '4.0',          description = '')
+    max_corres_dis_arg                = DeclareLaunchArgument('max_corres_dis',                default_value = '1.0',          description = '')
     max_iter_arg                      = DeclareLaunchArgument('max_iter',                      default_value = '500',          description = '')
     transform_eps_arg                 = DeclareLaunchArgument('transform_eps',                 default_value = '0.00000001',   description = '')
     euclidean_fit_eps_arg             = DeclareLaunchArgument('euclidean_fit_eps',             default_value = '0.00000001',   description = '')
