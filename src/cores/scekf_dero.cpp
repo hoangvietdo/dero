@@ -149,9 +149,9 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
   Mat12d Q_ = Mat12d::Zero();
   Q_        = noise_covariance_matrix.Q;
 
-  Q_(0, 0)             = 0.001 * P_v_r(0, 0) * dt_radar;
-  Q_(1, 1)             = 0.01 * P_v_r(1, 1) * dt_radar;
-  Q_(2, 2)             = 0.0001 * P_v_r(2, 2) * dt_radar;
+  Q_(0, 0)             = 0.1 * P_v_r(0, 0) * dt_radar * dt_imu;
+  Q_(1, 1)             = 0.1 * P_v_r(1, 1) * dt_radar * dt_imu;
+  Q_(2, 2)             = 0.01 * P_v_r(2, 2) * dt_radar * dt_imu;
   Q_.block<3, 3>(3, 3) = noise_covariance_matrix.Q.block<3, 3>(3, 3) * dt_radar;
   Q_.block<3, 3>(6, 6) = noise_covariance_matrix.Q.block<3, 3>(6, 6) / dt_radar;
   Q_.block<3, 3>(9, 9) = noise_covariance_matrix.Q.block<3, 3>(9, 9) / dt_radar;
@@ -221,7 +221,7 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
 
 bool ScEkfDero::RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
                                        const bool &outlier_reject, const bool &zupt_trigger, State &first_state) {
-  if (icp_meas.score >= 5.0)
+  if (icp_meas.score >= 3.0)
     return false;
 
   //  NOTE: Measurement Update

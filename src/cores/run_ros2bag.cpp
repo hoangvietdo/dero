@@ -832,6 +832,24 @@ void RunRos2Bag::Run() {
               end_radar_scan_inlier  = radar_estimator_.getRadarScanInlier();
 
               icp_init_pose = Mat4d::Identity();
+              // Mat3d R_      = Mat3d::Identity();
+              // Vec3d p_      = Vec3d::Zero();
+              // Mat3d R_first = quat2dcm(first_window.quaternion);
+              // Mat3d R_end   = quat2dcm(state_.quaternion);
+              // state_        = scekf_dero_.getState();
+              //
+              // const Mat3d Rbr   = imu_radar_calibration_.rotation_matrix.transpose();
+              // const Mat3d Rrb   = imu_radar_calibration_.rotation_matrix;
+              // const Vec3d p_r_b = imu_radar_calibration_.position;
+              // const Vec3d a_    = state_.position + R_end * p_r_b;
+              // const Vec3d b_    = first_window.position + R_first * p_r_b;
+              // const Mat3d Rnr   = Rbr * R_first.transpose();
+              //
+              // R_ = Rbr * R_first.transpose() * R_end * Rrb;
+              // p_ = Rnr * (a_ - b_);
+
+              // icp_init_pose.block<3, 3>(0, 0) = R_.transpose();
+              // icp_init_pose.block<3, 1>(0, 3) = -R_.transpose() * p_;
 
               ICPTransform icp_meas = radar_estimator_.solveICP(first_window_radar_scan_inlier, end_radar_scan_inlier,
                                                                 radar_position_estimator_param_, icp_init_pose);
