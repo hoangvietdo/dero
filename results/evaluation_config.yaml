@@ -13,7 +13,7 @@ Algorithms:
   ekf_rio:
     fn: traj_est
     label: EKF RIO
-  ekf_drins:
+  scekf_dero:
     fn: traj_est
     label: SC-IEKF DeRO
 RelDistances: [50, 100, 150, 200]
