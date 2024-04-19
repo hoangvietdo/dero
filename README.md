@@ -7,7 +7,7 @@
 ## 1. Overview
 This is a ROS 2 package for DeRO, written in C++. DeRO utilizes 4D point cloud measurements from a millimeter-wave Frequency-Modulated Continuous Wave (FMCW) radar and IMU measurements to estimate the robot's poses. Specifically, Doppler velocity and gyroscope measurements are used to calculate odometry, while the radar's range and accelerometer measurements are utilized to update the estimation using a Stochastic Cloning Extended Kalman Filter (SCEKF).
 
-<img src='images/vicon.png' width='400' height='300'>  <img src='images/carried_1.png' width='550' height='300'>
+<img src='images/vicon.png' width='300' height='250'>  <img src='images/carried_1.png' width='450' height='250'>
 
 ## 2. Prerequisites
 - Ubuntu 20.04.
