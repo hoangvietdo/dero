@@ -49,32 +49,29 @@ void ScEkfDero::InitializeState(const std::vector<sensor_msgs::msg::Imu> &imu_bu
   f_b_mean /= imu_buff.size();
   w_b_mean /= imu_buff.size();
 
-  double phi_0 = std::atan2(-f_b_mean(1, 0), -f_b_mean(2, 0));
-  double psi_0 = 0.0;
   // clang-format off
+  double phi_0 = std::atan2(-f_b_mean(1, 0),
+                            -f_b_mean(2, 0));
   double theta_0 = std::atan2(f_b_mean(0, 0),
-                   std::sqrt(f_b_mean(1, 0) * f_b_mean(1, 0) + f_b_mean(2, 0) * f_b_mean(2, 0)));
+                              std::sqrt(f_b_mean(1, 0) * f_b_mean(1, 0) + f_b_mean(2, 0) * f_b_mean(2, 0)));
   // clang-format on
 
-  euler_0 << phi_0, theta_0, psi_0;
-  const Vec3d foo_grav = euler2dcm(euler_0).transpose() * gravity;
-
   ca_state.gyro_bias   = w_b_mean;
-  ca_state.euler       = euler_0;
+  ca_state.euler       = quat2euler(state.quaternion);
+  ca_state.euler(0, 0) = phi_0;
+  ca_state.euler(1, 0) = theta_0;
   ca_state.position    = state.position;
   ca_state.velocity    = state.velocity;
   ca_state.radar_scale = state.radar_scale;
+  Vec3d foo_grav       = euler2dcm(ca_state.euler).transpose() * gravity;
   ca_state.accel_bias  = f_b_mean + foo_grav;
 
   state.quaternion = euler2quat(ca_state.euler);
   state.accel_bias = ca_state.accel_bias;
   state.gyro_bias  = ca_state.gyro_bias;
-
-  prevOmega = Mat4d::Zero();
-  prevOmega = calculateOmega(w_b_mean);
 } // void InitializeState
 
-void ScEkfDero::GyroscopeMechanization(const sensor_msgs::msg::Imu &imu_msg) {
+void ScEkfDero::GyroscopeMechanization(const sensor_msgs::msg::Imu &imu_msg, const bool &accel_trigger) {
   // clang-format off
   w_b_hat << imu_msg.angular_velocity.x,
              imu_msg.angular_velocity.y,
@@ -83,17 +80,60 @@ void ScEkfDero::GyroscopeMechanization(const sensor_msgs::msg::Imu &imu_msg) {
 
   w_b_hat -= state.gyro_bias;
 
-  // 4th runge kutta
-  const Vec4d      zero_omega(0.0, w_b_hat(0, 0), w_b_hat(1, 0), w_b_hat(2, 0));
+  // clang-format off
+  // 4th runge-kutta quaternion integration
+  const Vec4d zero_omega(0.0,
+                         w_b_hat(0, 0),
+                         w_b_hat(1, 0),
+                         w_b_hat(2, 0));
+
   Vec4d            prevQuaternion = state.quaternion;
-  const Quaternion prevQuaternion_(state.quaternion(0, 0), state.quaternion(1, 0), state.quaternion(2, 0),
+  const Quaternion prevQuaternion_(state.quaternion(0, 0),
+                                   state.quaternion(1, 0),
+                                   state.quaternion(2, 0),
                                    state.quaternion(3, 0));
-  const Vec4d      k_1(0.5 * calculateLeftOmega(prevQuaternion) * zero_omega);
-  const Vec4d      k_2(0.5 * calculateLeftOmega(prevQuaternion + k_1 * dt_imu / 2) * zero_omega);
-  const Vec4d      k_3(0.5 * calculateLeftOmega(prevQuaternion + k_2 * dt_imu / 2) * zero_omega);
-  const Vec4d      k_4(0.5 * calculateLeftOmega(prevQuaternion + k_3 * dt_imu) * zero_omega);
+  // clang-format on
+  const Vec4d k_1(0.5 * calculateLeftOmega(prevQuaternion) * zero_omega);
+  const Vec4d k_2(0.5 * calculateLeftOmega(prevQuaternion + k_1 * dt_imu / 2) * zero_omega);
+  const Vec4d k_3(0.5 * calculateLeftOmega(prevQuaternion + k_2 * dt_imu / 2) * zero_omega);
+  const Vec4d k_4(0.5 * calculateLeftOmega(prevQuaternion + k_3 * dt_imu) * zero_omega);
   state.quaternion = prevQuaternion + (k_1 + 2 * k_2 + 2 * k_3 + k_4) * dt_imu / 6;
   state.quaternion = quatNormalize(state.quaternion);
+
+  // if radar msg is messed up then use accel to do odometry
+  if (accel_trigger) {
+    Vec3d f_b;
+    // clang-format off
+    f_b << imu_msg.linear_acceleration.x,
+           imu_msg.linear_acceleration.y,
+           imu_msg.linear_acceleration.z;
+
+    f_b -= state.accel_bias;
+    const Quaternion newQuaternion(state.quaternion(0, 0),
+                                   state.quaternion(1, 0),
+                                   state.quaternion(2, 0),
+                                   state.quaternion(3, 0));
+    // clang-format on
+
+    const Quaternion simpson_quaternion = prevQuaternion_ * newQuaternion.inverse();
+    const Mat3d      simpson_Rbn        = simpson_quaternion.toRotationMatrix();
+    Mat3d            prev_Rbn           = quat2dcm(prevQuaternion);
+
+    const Vec3d a_ = (f_b + 4.0 * (f_b + 0.5 * (simpson_Rbn - Mat3d::Identity()) * f_b) +
+                      (f_b + (simpson_Rbn - Mat3d::Identity()) * f_b)) *
+                     dt_imu / 6.0;
+
+    const Vec3d prevVelocity = state.velocity;
+    state.velocity           = state.velocity + prev_Rbn * a_ + gravity * dt_imu;
+
+    const Vec3d v_ = (f_b + 4.0 * (f_b + 0.25 * (simpson_Rbn - Mat3d::Identity()) * f_b) +
+                      (f_b + 0.5 * (simpson_Rbn - Mat3d::Identity()) * f_b)) *
+                     dt_imu / 12.0;
+
+    const Vec3d foo = (4.0 * v_ + a_) * dt_imu / 6.0;
+    const Vec3d p_  = prevVelocity * dt_imu + prev_Rbn * foo + 0.5 * gravity * dt_imu * dt_imu;
+    state.position  = state.position + p_;
+  }
 } // void ImuMechanization
 
 void ScEkfDero::RadarMechanization(const Vec3d &v_r, IMURadarCalibrationParam &imu_radar_calibration_) {
@@ -110,6 +150,7 @@ void ScEkfDero::RadarMechanization(const Vec3d &v_r, IMURadarCalibrationParam &i
 
   state.position += v_n * dt_radar;
   v_n_            = v_n;
+  state.velocity  = v_n;
 } // void RadarMechanization
 
 void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCalibrationParam &imu_radar_calibration_,
@@ -139,38 +180,39 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
   const double tau_radar = 1000;
 
   F.block<3, 3>(3, 6) = Rbn;
-  F.block<3, 3>(6, 6) = (-1.0 / tau_gyro) * Mat3d::Identity();
-  F.block<3, 3>(9, 9) = (-1.0 / tau_radar) * Mat3d::Identity();
+  F.block<3, 3>(6, 6) = 0.0 * (-1.0 / tau_gyro) * Mat3d::Identity();
+  F.block<3, 3>(9, 9) = 0.0 * (-1.0 / tau_radar) * Mat3d::Identity();
 
   G.block<3, 3>(0, 0) = Rbn * imu_radar_calibration_.rotation_matrix;
   G.block<3, 3>(0, 3) = Rbn * skewMatrix(imu_radar_calibration_.position);
-  G.block<3, 3>(3, 3) = -Rbn;
+  G.block<3, 3>(3, 3) = Rbn;
 
   Mat12d Q_ = Mat12d::Zero();
   Q_        = noise_covariance_matrix.Q;
 
-  Q_(0, 0)             = 0.1 * P_v_r(0, 0) * dt_radar * dt_imu;
-  Q_(1, 1)             = 0.1 * P_v_r(1, 1) * dt_radar * dt_imu;
-  Q_(2, 2)             = 0.01 * P_v_r(2, 2) * dt_radar * dt_imu;
+  Q_(0, 0)             = P_v_r(0, 0) * dt_radar;
+  Q_(1, 1)             = P_v_r(1, 1) * dt_radar;
+  Q_(2, 2)             = P_v_r(2, 2) * dt_radar;
   Q_.block<3, 3>(3, 3) = noise_covariance_matrix.Q.block<3, 3>(3, 3) * dt_radar;
   Q_.block<3, 3>(6, 6) = noise_covariance_matrix.Q.block<3, 3>(6, 6) / dt_radar;
   Q_.block<3, 3>(9, 9) = noise_covariance_matrix.Q.block<3, 3>(9, 9) / dt_radar;
 
-  Mat12d Phi = Mat12d::Identity() + F * dt_radar + 0.5 * dt_radar * dt_radar * F * F;
+  Mat12d Phi = Mat12d::Zero();
+  Phi        = Mat12d::Identity() + F * dt_radar + 0.5 * dt_imu * dt_imu * F * F;
 
   covariance_matrix.priori     = Phi * covariance_matrix.posteriori * Phi.transpose() + G * Q_ * G.transpose();
   covariance_matrix.priori     = EnsurePSDDr(covariance_matrix.priori);
   covariance_matrix.posteriori = covariance_matrix.priori;
 
-  if (window_count == 1) {
-    Phi_accumulation = Mat12d::Zero();
-    Phi_accumulation = Phi;
-  } else {
-    Phi_accumulation = Phi * Phi_accumulation;
-  }
-
   if (use_cloning) {
     window_count += 1;
+
+    if (window_count == 1) {
+      Phi_accumulation = Mat12d::Zero();
+      Phi_accumulation = Phi;
+    } else {
+      Phi_accumulation = Phi * Phi_accumulation;
+    }
 
     if (window_count == window_size) {
       if (window_size == 1) {
@@ -190,12 +232,11 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
 
       } else {
         //  NOTE: General calculation for window_size > 1
-        covariance_matrix.priori = Phi_accumulation * covariance_matrix.posteriori * Phi_accumulation.transpose() +
-                                   Phi_accumulation * G * Q_ * G.transpose() * Phi_accumulation.transpose();
-
+        covariance_matrix.priori = Phi * covariance_matrix.posteriori * Phi.transpose() + G * Q_ * G.transpose();
         covariance_matrix.priori = EnsurePSDDr(covariance_matrix.priori);
 
-        covariance_matrix_cloning.priori                     = Mat18d::Zero();
+        covariance_matrix_cloning.priori = Mat18d::Zero();
+
         // Upper left
         covariance_matrix_cloning.priori.block<12, 12>(0, 0) = covariance_matrix.priori;
 
@@ -220,10 +261,8 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
 } // void TimeUpdate
 
 bool ScEkfDero::RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
-                                       const bool &outlier_reject, const bool &zupt_trigger, State &first_state) {
-  if (icp_meas.score >= 3.0)
-    return false;
-
+                                       const bool &outlier_reject, State &first_state, const Vec2d &r_accel,
+                                       const MatXd &H_accel) {
   //  NOTE: Measurement Update
   MatXd       H_cloning = MatXd::Zero(3, 18);
   const Mat3d foo_1     = imu_radar_calibration_.rotation_matrix.transpose();
@@ -237,47 +276,41 @@ bool ScEkfDero::RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calib
   H_cloning.block<3, 3>(0, 12) = -foo_4;
   H_cloning.block<3, 3>(0, 15) =
       foo_4 * (skewMatrix(first_state.position) - skewMatrix(state.position) - skewMatrix(foo_5));
+
   const Vec3d icp_hat        = foo_4 * foo_3;
   const Vec3d r_icp          = icp_hat - icp_meas.translation;
-  const Mat3d R_discrete_icp = foo_4 * (icp_meas.P_vec.asDiagonal()) * foo_4.transpose();
-  const Mat3d S_radar        = H_cloning * covariance_matrix_cloning.priori * H_cloning.transpose() + R_discrete_icp;
-  MatXd       K_radar        = MatXd::Zero(18, 3);
-  K_radar                    = covariance_matrix_cloning.priori * H_cloning.transpose() * S_radar.inverse();
-  VecXd error_state_radar    = VecXd::Zero(18, 1);
-  error_state_radar          = K_radar * r_icp;
+  const Mat3d R_discrete_icp = icp_meas.rotation * icp_meas.P_vec.asDiagonal() * icp_meas.rotation.transpose();
 
-  if (!zupt_trigger) {
-    if (outlier_reject) {
-      const double gamma =
-          r_icp.transpose() *
-          (H_cloning * covariance_matrix_cloning.posteriori * H_cloning.transpose() + R_discrete_icp).inverse() * r_icp;
+  Vec5d r                 = Vec5d::Zero();
+  Mat5d R                 = Mat5d::Zero();
+  MatXd H                 = MatXd::Zero(5, 18);
+  MatXd H_accel_          = MatXd::Zero(2, 18);
+  MatXd K_radar           = MatXd::Zero(18, 5);
+  VecXd error_state_radar = VecXd::Zero(18, 1);
 
-      boost::math::chi_squared chiSquaredDist(3.0);
-      const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.0001);
+  r << r_icp, r_accel;
 
-      if (gamma < gamma_thresh) {
-        covariance_matrix_cloning.posteriori = Mat18d::Zero();
-        covariance_matrix_cloning.posteriori = (Mat18d::Identity() - K_radar * H_cloning) *
-                                                   covariance_matrix_cloning.priori *
-                                                   (Mat18d::Identity() - K_radar * H_cloning).transpose() +
-                                               K_radar * R_discrete_icp * K_radar.transpose();
+  H_accel_.block<2, 12>(0, 0) = H_accel;
 
-        covariance_matrix_cloning.posteriori = EnsurePSDCloning(covariance_matrix_cloning.posteriori);
+  H.block<3, 18>(0, 0) = H_cloning;
+  H.block<2, 18>(3, 0) = H_accel_;
+  R.block<3, 3>(0, 0)  = R_discrete_icp;
+  R.block<2, 2>(3, 3)  = noise_covariance_matrix.R_accel;
+  const Mat5d S_radar  = H * covariance_matrix_cloning.priori * H.transpose() + R;
+  K_radar              = covariance_matrix_cloning.priori * H.transpose() * S_radar.inverse();
+  error_state_radar    = K_radar * r;
 
-        covariance_matrix.posteriori = covariance_matrix_cloning.posteriori.block<12, 12>(0, 0);
-        covariance_matrix.posteriori = EnsurePSDDr(covariance_matrix.posteriori);
+  if (outlier_reject) {
+    const double gamma = r.transpose() * (H * covariance_matrix_cloning.posteriori * H.transpose() + R).inverse() * r;
 
-        ErrorCorrection(error_state_radar);
-        return true;
-      } else {
-        return false;
-      }
-    } else {
+    boost::math::chi_squared chiSquaredDist(5.0);
+    const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.05);
+
+    if (gamma < gamma_thresh) {
       covariance_matrix_cloning.posteriori = Mat18d::Zero();
-      covariance_matrix_cloning.posteriori = (Mat18d::Identity() - K_radar * H_cloning) *
-                                                 covariance_matrix_cloning.priori *
-                                                 (Mat18d::Identity() - K_radar * H_cloning).transpose() +
-                                             K_radar * R_discrete_icp * K_radar.transpose();
+      covariance_matrix_cloning.posteriori = (Mat18d::Identity() - K_radar * H) * covariance_matrix_cloning.priori *
+                                                 (Mat18d::Identity() - K_radar * H).transpose() +
+                                             K_radar * R * K_radar.transpose();
 
       covariance_matrix_cloning.posteriori = EnsurePSDCloning(covariance_matrix_cloning.posteriori);
 
@@ -286,9 +319,22 @@ bool ScEkfDero::RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calib
 
       ErrorCorrection(error_state_radar);
       return true;
-    }
-  } else
-    return false;
+    } else
+      return false;
+  } else {
+    covariance_matrix_cloning.posteriori = Mat18d::Zero();
+    covariance_matrix_cloning.posteriori = (Mat18d::Identity() - K_radar * H) * covariance_matrix_cloning.priori *
+                                               (Mat18d::Identity() - K_radar * H).transpose() +
+                                           K_radar * R * K_radar.transpose();
+
+    covariance_matrix_cloning.posteriori = EnsurePSDCloning(covariance_matrix_cloning.posteriori);
+
+    covariance_matrix.posteriori = covariance_matrix_cloning.posteriori.block<12, 12>(0, 0);
+    covariance_matrix.posteriori = EnsurePSDDr(covariance_matrix.posteriori);
+
+    ErrorCorrection(error_state_radar);
+    return true;
+  }
 } // void RadarMeasurementUpdate
 
 bool ScEkfDero::MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel, const bool &outlier_reject) {
@@ -306,7 +352,7 @@ bool ScEkfDero::MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_acce
                          r_accel;
 
     boost::math::chi_squared chiSquaredDist(1.0);
-    const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.01);
+    const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.05);
 
     if (gamma < gamma_thresh) {
       covariance_matrix.posteriori = (Mat12d::Identity() - K_accel * H_accel) * covariance_matrix.priori *
@@ -317,9 +363,8 @@ bool ScEkfDero::MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_acce
 
       ErrorCorrection(error_state_accel_);
       return true;
-    } else {
+    } else
       return false;
-    }
   } else {
     covariance_matrix.posteriori = (Mat12d::Identity() - K_accel * H_accel) * covariance_matrix.priori *
                                        (Mat12d::Identity() - K_accel * H_accel).transpose() +
@@ -343,13 +388,13 @@ void ScEkfDero::ErrorCorrection(const VecXd &error_state_) {
   state.radar_scale -= error_state.radar_scale;
 
   Vec4d error_quaternion;
-  error_quaternion << 1.0, 0.5 * error_state.misalignment(0, 0), 0.5 * error_state.misalignment(1, 0),
-      0.5 * error_state.misalignment(2, 0);
+  // clang-format off
+  error_quaternion << 1.0, 0.5 * error_state.misalignment(0, 0),
+                           0.5 * error_state.misalignment(1, 0),
+                           0.5 * error_state.misalignment(2, 0);
+  // clang-format on
 
   state.quaternion = quatMultiplication(error_quaternion, state.quaternion);
-
-  // state_cloning.position   = state.position;
-  // state_cloning.quaternion = state.quaternion;
 } // void ErrorCorrection
 
 Mat2d ScEkfDero::getR_Accel() { return noise_covariance_matrix.R_accel; } // getR_Accel

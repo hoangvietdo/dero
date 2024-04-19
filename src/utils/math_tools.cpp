@@ -55,13 +55,23 @@ Vec4d quatMultiplication(Vec4d &p, Vec4d &q) {
 
 Mat4d calculateOmega(Vec3d &w) {
   Mat4d Omega;
-  Omega << 0.0, -w(0), -w(1), -w(2), w(0), 0.0, w(2), -w(1), w(1), -w(2), 0.0, w(0), w(2), w(1), -w(0), 0.0;
+  // clang-format off
+  Omega << 0.0 , -w(0), -w(1), -w(2),
+           w(0),  0.0 ,  w(2), -w(1),
+           w(1), -w(2),  0.0 ,  w(0),
+           w(2),  w(1), -w(0),  0.0;
   return Omega;
+  // clang-format on
 } // calculateOmega
 
 Mat4d calculateLeftOmega(const Vec4d &v) {
   Mat4d matrix;
-  matrix << v(0), -v(1), -v(2), -v(3), v(1), v(0), -v(3), v(2), v(2), v(3), v(0), -v(1), v(3), -v(2), v(1), v(0);
+  // clang-format off
+  matrix << v(0), -v(1), -v(2), -v(3),
+            v(1),  v(0), -v(3),  v(2),
+            v(2),  v(3),  v(0), -v(1),
+            v(3), -v(2),  v(1),  v(0);
+  // clang-format on
   return matrix;
 } // calculateLeftOmega
 

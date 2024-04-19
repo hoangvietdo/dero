@@ -10,10 +10,10 @@ Datasets:
   carried_5:
     label: carried_5   
 Algorithms:
-  ekf_rio:
-    fn: traj_est
-    label: EKF RIO
   scekf_dero:
     fn: traj_est
     label: SC-IEKF DeRO
+  ekf_rio:
+    fn: traj_est
+    label: EKF RIO [11]
 RelDistances: [50, 100, 150, 200]

@@ -184,6 +184,10 @@ class RunRos2Bag : public rclcpp::Node {
     double height_mean;
     double scale_factor_mean;
     double scale_factor_std;
+    double icp_std_x_;
+    double icp_std_y_;
+    double icp_std_z_;
+    double accel_angle_adapt_;
 
     bool ekf_rio_init_                    = false;
     bool imu_data_received_               = false;
@@ -197,6 +201,7 @@ class RunRos2Bag : public rclcpp::Node {
     bool accel_outlier_reject             = true;
     bool window_slicing                   = false;
     bool accel_init                       = false;
+    bool accel_trigger                    = false;
     bool use_cloning;
     bool imu_only;
     bool use_radar;
@@ -237,8 +242,8 @@ class RunRos2Bag : public rclcpp::Node {
     CovarianceMatrixCloning     covariance_matrix_cloning_;
     CoarseAlignmentState        ca_state_;
     RadarEstimator              radar_estimator_;
-    RadarVelocityEstimatorParam radar_velocity_estimator_param_;
-    RadarPositionEstimatorParam radar_position_estimator_param_;
+    RadarVelocityEstimatorParam radar_vel_est_param_;
+    RadarPositionEstimatorParam radar_pos_est_param_;
     IMURadarCalibrationParam    imu_radar_calibration_;
 
     pcl::PointCloud<RadarPointCloudType> first_window_radar_scan_inlier;

@@ -376,7 +376,8 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     curr_->at(i).z = curr_pcl_normalized_msg.points[i].z;
   }
 
-  pcl::IterativeClosestPointNonLinear<pcl::PointXYZ, pcl::PointXYZ> icp;
+  pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+
   if (radar_position_estimator_param.max_corres_dis != 0.0)
     icp.setMaxCorrespondenceDistance(radar_position_estimator_param.max_corres_dis);
 
@@ -423,7 +424,7 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
 
   bool is_converged = icp.hasConverged();
   if (!is_converged) {
-    icp_results.score = 10; // any number that >=5 will reject ICP estimation
+    std::cout << "ICP is not converged!";
   }
 
   pcl::CorrespondencesPtr corresps(new pcl::Correspondences);
@@ -452,15 +453,19 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     sum_z              += (foo_z * foo_z);
   }
 
-  const double N = static_cast<double>(corresps->size());
-  m_sqrt_sum_x   = std::sqrt(sum_x) / N;
-  m_sqrt_sum_y   = std::sqrt(sum_y) / N;
-  m_sqrt_sum_z   = std::sqrt(sum_z) / N;
+  // const double N = static_cast<double>(corresps->size());
+  m_sqrt_sum_x = std::sqrt(sum_x) / corresps->size();
+  m_sqrt_sum_y = std::sqrt(sum_y) / corresps->size();
+  m_sqrt_sum_z = std::sqrt(sum_z) / corresps->size();
 
-  const double sum  = sum_x + sum_y + sum_z;
+  // const double sum  = sum_x + sum_y + sum_z;
   icp_results.P_vec = Vec3d::Zero();
-  icp_results.P_vec << 1.5 * m_sqrt_sum_x, 2.5 * m_sqrt_sum_y, 300 * m_sqrt_sum_z;
-  icp_results.P_vec = icp_results.score * icp_results.P_vec / sum;
+
+  // clang-format off
+  icp_results.P_vec << radar_position_estimator_param.icp_std_x + icp_results.score * m_sqrt_sum_x,
+                       radar_position_estimator_param.icp_std_y + icp_results.score * m_sqrt_sum_y,
+                       radar_position_estimator_param.icp_std_z + icp_results.score * m_sqrt_sum_z;
+  // clang-format on
 
   //  NOTE: this transform is for "only radar localization"
   const bool radarOdom = false;

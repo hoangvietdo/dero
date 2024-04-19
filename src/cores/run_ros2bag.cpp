@@ -104,6 +104,10 @@ RunRos2Bag::RunRos2Bag(std::string node_name) : rclcpp::Node(node_name) {
   this->declare_parameter("euclidean_fit_eps", 0.0);
   this->declare_parameter("window_slicing", false);
   this->declare_parameter("ransac_outlier_reject_thres", 0.0);
+  this->declare_parameter("icp_std_x", 0.0);
+  this->declare_parameter("icp_std_y", 0.0);
+  this->declare_parameter("icp_std_z", 0.0);
+  this->declare_parameter("accel_angle_adapt", 0.0);
 
   LoadParameters();
 
@@ -117,7 +121,7 @@ RunRos2Bag::RunRos2Bag(std::string node_name) : rclcpp::Node(node_name) {
   viet_timer_ = this->create_wall_timer(std::chrono::milliseconds(timer_period_),
                                         std::bind(&RunRos2Bag::MsgPublish, this), pub_callback_group_);
 
-  callback_timer_process_ = this->create_wall_timer(1ms, std::bind(&RunRos2Bag::Run, this), process_callback_group_);
+  callback_timer_process_ = this->create_wall_timer(2ms, std::bind(&RunRos2Bag::Run, this), process_callback_group_);
 
   radar_publisher_        = this->create_publisher<sensor_msgs::msg::PointCloud2>("incsl/radar_filtered_scan", 10);
   radar_raw_publisher_    = this->create_publisher<sensor_msgs::msg::PointCloud2>("incsl/radar_raw_scan", 10);
@@ -210,45 +214,52 @@ void RunRos2Bag::LoadParameters() {
   this->get_parameter("window_slicing", window_slicing);
   this->get_parameter("ransac_outlier_reject_thres", ransac_outlier_reject_thres);
   this->get_parameter("bag_dir", bag_dir);
+  this->get_parameter("icp_std_x", icp_std_x_);
+  this->get_parameter("icp_std_y", icp_std_y_);
+  this->get_parameter("icp_std_z", icp_std_z_);
+  this->get_parameter("accel_angle_adapt", accel_angle_adapt_);
 
-  radar_velocity_estimator_param_.min_distance               = min_distance_;
-  radar_velocity_estimator_param_.max_distance               = max_distance_;
-  radar_velocity_estimator_param_.min_db                     = min_db_;
-  radar_velocity_estimator_param_.elevation_threshold        = elevation_threshold_;
-  radar_velocity_estimator_param_.azimuth_threshold          = azimuth_threshold_;
-  radar_velocity_estimator_param_.velocity_correction_factor = velocity_correction_factor_;
-  radar_velocity_estimator_param_.filter_min_z               = filter_min_z_;
-  radar_velocity_estimator_param_.filter_max_z               = filter_max_z_;
-  radar_velocity_estimator_param_.zero_velocity_threshold    = zero_velocity_threshold_;
-  radar_velocity_estimator_param_.sigma_zero_velocity_x      = sigma_zero_velocity_x_;
-  radar_velocity_estimator_param_.sigma_zero_velocity_y      = sigma_zero_velocity_y_;
-  radar_velocity_estimator_param_.sigma_zero_velocity_z      = sigma_zero_velocity_z_;
-  radar_velocity_estimator_param_.allowed_outlier_percentage = allowed_outlier_percentage_;
-  radar_velocity_estimator_param_.max_sigma_x                = max_sigma_x_;
-  radar_velocity_estimator_param_.max_sigma_y                = max_sigma_y_;
-  radar_velocity_estimator_param_.max_sigma_z                = max_sigma_z_;
-  radar_velocity_estimator_param_.max_r_cond                 = max_r_cond_;
-  radar_velocity_estimator_param_.use_ransac                 = use_ransac_;
-  radar_velocity_estimator_param_.outlier_prob               = outlier_prob_;
-  radar_velocity_estimator_param_.success_prob               = success_prob_;
-  radar_velocity_estimator_param_.N_ransac_points            = N_ransac_points_;
-  radar_velocity_estimator_param_.inlier_threshold           = inlier_threshold_;
-  radar_velocity_estimator_param_.sigma_offset_radar_x       = sigma_offset_radar_x_;
-  radar_velocity_estimator_param_.sigma_offset_radar_y       = sigma_offset_radar_y_;
-  radar_velocity_estimator_param_.sigma_offset_radar_z       = sigma_offset_radar_z_;
-  radar_velocity_estimator_param_.outlier_percentil_radar    = outlier_percentil_radar_;
-  radar_velocity_estimator_param_.use_odr                    = use_odr_;
-  radar_velocity_estimator_param_.min_speed_odr              = min_speed_odr_;
-  radar_velocity_estimator_param_.sigma_v_d                  = sigma_v_d_;
-  radar_velocity_estimator_param_.model_noise_offset_deg     = model_noise_offset_deg_;
-  radar_velocity_estimator_param_.model_noise_scale_deg      = model_noise_scale_deg_;
-  radar_velocity_estimator_param_.odr_inlier_threshold       = odr_inlier_threshold_;
+  radar_vel_est_param_.min_distance               = min_distance_;
+  radar_vel_est_param_.max_distance               = max_distance_;
+  radar_vel_est_param_.min_db                     = min_db_;
+  radar_vel_est_param_.elevation_threshold        = elevation_threshold_;
+  radar_vel_est_param_.azimuth_threshold          = azimuth_threshold_;
+  radar_vel_est_param_.velocity_correction_factor = velocity_correction_factor_;
+  radar_vel_est_param_.filter_min_z               = filter_min_z_;
+  radar_vel_est_param_.filter_max_z               = filter_max_z_;
+  radar_vel_est_param_.zero_velocity_threshold    = zero_velocity_threshold_;
+  radar_vel_est_param_.sigma_zero_velocity_x      = sigma_zero_velocity_x_;
+  radar_vel_est_param_.sigma_zero_velocity_y      = sigma_zero_velocity_y_;
+  radar_vel_est_param_.sigma_zero_velocity_z      = sigma_zero_velocity_z_;
+  radar_vel_est_param_.allowed_outlier_percentage = allowed_outlier_percentage_;
+  radar_vel_est_param_.max_sigma_x                = max_sigma_x_;
+  radar_vel_est_param_.max_sigma_y                = max_sigma_y_;
+  radar_vel_est_param_.max_sigma_z                = max_sigma_z_;
+  radar_vel_est_param_.max_r_cond                 = max_r_cond_;
+  radar_vel_est_param_.use_ransac                 = use_ransac_;
+  radar_vel_est_param_.outlier_prob               = outlier_prob_;
+  radar_vel_est_param_.success_prob               = success_prob_;
+  radar_vel_est_param_.N_ransac_points            = N_ransac_points_;
+  radar_vel_est_param_.inlier_threshold           = inlier_threshold_;
+  radar_vel_est_param_.sigma_offset_radar_x       = sigma_offset_radar_x_;
+  radar_vel_est_param_.sigma_offset_radar_y       = sigma_offset_radar_y_;
+  radar_vel_est_param_.sigma_offset_radar_z       = sigma_offset_radar_z_;
+  radar_vel_est_param_.outlier_percentil_radar    = outlier_percentil_radar_;
+  radar_vel_est_param_.use_odr                    = use_odr_;
+  radar_vel_est_param_.min_speed_odr              = min_speed_odr_;
+  radar_vel_est_param_.sigma_v_d                  = sigma_v_d_;
+  radar_vel_est_param_.model_noise_offset_deg     = model_noise_offset_deg_;
+  radar_vel_est_param_.model_noise_scale_deg      = model_noise_scale_deg_;
+  radar_vel_est_param_.odr_inlier_threshold       = odr_inlier_threshold_;
 
-  radar_position_estimator_param_.max_corres_dis                  = max_corres_dis_;
-  radar_position_estimator_param_.max_iter                        = max_iter_;
-  radar_position_estimator_param_.transform_eps                   = transform_eps_;
-  radar_position_estimator_param_.euclidean_fit_eps               = euclidean_fit_eps_;
-  radar_position_estimator_param_.ransac_outlier_reject_threshold = ransac_outlier_reject_thres;
+  radar_pos_est_param_.max_corres_dis                  = max_corres_dis_;
+  radar_pos_est_param_.max_iter                        = max_iter_;
+  radar_pos_est_param_.transform_eps                   = transform_eps_;
+  radar_pos_est_param_.euclidean_fit_eps               = euclidean_fit_eps_;
+  radar_pos_est_param_.ransac_outlier_reject_threshold = ransac_outlier_reject_thres;
+  radar_pos_est_param_.icp_std_x                       = icp_std_x_;
+  radar_pos_est_param_.icp_std_y                       = icp_std_y_;
+  radar_pos_est_param_.icp_std_z                       = icp_std_z_;
 
   RCLCPP_INFO_ONCE(this->get_logger(), "The IMU topic name is %s", imu_topic_name_.c_str());
   RCLCPP_INFO_ONCE(this->get_logger(), "The Radar topic name is %s", radar_topic_name_.c_str());
@@ -320,7 +331,7 @@ void RunRos2Bag::LoadParameters() {
   state_.quaternion << 1.0, 0.0, 0.0, 0.0;
   state_.radar_scale << 1.0, 1.0, 1.0;
 
-  accel_roll_pitch_noise_ << 2.0 * D2R, 2.0 * D2R;
+  accel_roll_pitch_noise_ << 3.0 * D2R, 3.0 * D2R;
 
   if (!use_dr_structure) {
     ekf_rio_.setQ(noise_);
@@ -336,32 +347,41 @@ void RunRos2Bag::LoadParameters() {
     scekf_dero_.setGravityValue(grav_);
   }
 
-  Vec3d offset_body_euler(imu_body_rotation_offset_x_ * D2R, imu_body_rotation_offset_y_ * D2R,
+  // clang-format off
+  Vec3d offset_body_euler(imu_body_rotation_offset_x_ * D2R,
+                          imu_body_rotation_offset_y_ * D2R,
                           imu_body_rotation_offset_z_ * D2R);
 
   const Mat3d offset_body_rot = euler2dcm(offset_body_euler);
 
-  imu_radar_calibration_.position << imu_radar_position_offset_x_, imu_radar_position_offset_y_,
-      imu_radar_position_offset_z_;
+  imu_radar_calibration_.position << imu_radar_position_offset_x_,
+                                     imu_radar_position_offset_y_,
+                                     imu_radar_position_offset_z_;
 
   imu_radar_calibration_.position = offset_body_rot * imu_radar_calibration_.position;
 
   Vec4d calib_quat_foo;
-  calib_quat_foo << imu_radar_quaternion_offset_w_, imu_radar_quaternion_offset_x_, imu_radar_quaternion_offset_y_,
-      imu_radar_quaternion_offset_z_;
+  calib_quat_foo << imu_radar_quaternion_offset_w_,
+                    imu_radar_quaternion_offset_x_,
+                    imu_radar_quaternion_offset_y_,
+                    imu_radar_quaternion_offset_z_;
 
   imu_radar_calibration_.rotation_matrix = offset_body_rot * quat2dcm(calib_quat_foo);
   imu_radar_calibration_.quaternion      = dcm2quat(imu_radar_calibration_.rotation_matrix);
 
   RCLCPP_INFO_ONCE(this->get_logger(), "IMU-Radar position offset is [%.2f %.2f %.2f] (m)",
-                   imu_radar_calibration_.position(0, 0), imu_radar_calibration_.position(1, 0),
-                   imu_radar_calibration_.position(2, 0));
+                                       imu_radar_calibration_.position(0, 0),
+                                       imu_radar_calibration_.position(1, 0),
+                                       imu_radar_calibration_.position(2, 0));
 
   Vec3d calib_euler_foo = quat2euler(imu_radar_calibration_.quaternion);
 
   RCLCPP_INFO_ONCE(this->get_logger(), "IMU-Radar attitude offset is [%.2f %.2f %.2f] (deg)",
-                   R2D * calib_euler_foo(0, 0), R2D * calib_euler_foo(1, 0), R2D * calib_euler_foo(2, 0));
+                                       R2D * calib_euler_foo(0, 0),
+                                       R2D * calib_euler_foo(1, 0),
+                                       R2D * calib_euler_foo(2, 0));
   RCLCPP_INFO_ONCE(this->get_logger(), "Finished loading!");
+  // clang-format on
 
   if (use_dr_structure)
     RCLCPP_INFO(this->get_logger(), "Running 3D Stochastic Cloning EKF Dead Reckoning Radar Odometry (SCEKF-DeRO)...");
@@ -378,7 +398,7 @@ void RunRos2Bag::ImuCallback(const sensor_msgs::msg::Imu imu_msg) {
     ekf_rio_.setImuCurrentTime(imu_msg.header.stamp.sec + imu_msg.header.stamp.nanosec * 1e-9);
 
     if ((ekf_rio_.getImuCurrentTime() <= ekf_rio_.getImuPreviousTime()) && ekf_rio_init_) {
-      RCLCPP_WARN_ONCE(this->get_logger(), "Imu messages in distorder!");
+      RCLCPP_ERROR(this->get_logger(), "Imu messages in disorder! Dropping data!");
       return;
     }
 
@@ -389,7 +409,7 @@ void RunRos2Bag::ImuCallback(const sensor_msgs::msg::Imu imu_msg) {
     scekf_dero_.setImuCurrentTime(imu_msg.header.stamp.sec + imu_msg.header.stamp.nanosec * 1e-9);
 
     if ((scekf_dero_.getImuCurrentTime() <= scekf_dero_.getImuPreviousTime()) && ekf_rio_init_) {
-      RCLCPP_WARN_ONCE(this->get_logger(), "Imu messages in distorder!");
+      RCLCPP_ERROR(this->get_logger(), "Imu messages in disorder! Dropping data!");
       return;
     }
 
@@ -445,39 +465,59 @@ void RunRos2Bag::RadarCallback(const sensor_msgs::msg::PointCloud2 radar_msg) {
     ekf_rio_.setRadarCurrentTime(radar_msg.header.stamp.sec + radar_msg.header.stamp.nanosec * 1e-9);
 
     if ((ekf_rio_.getRadarCurrentTime() <= ekf_rio_.getRadarPreviousTime()) && ekf_rio_init_) {
-      RCLCPP_WARN_ONCE(this->get_logger(), "Radar messages in distorder!");
+      RCLCPP_ERROR(this->get_logger(), "Radar messages in disorder! Dropping data!");
       return;
     }
 
     ekf_rio_.setRadarDt();
     ekf_rio_.setRadarPreviousTime(ekf_rio_.getRadarCurrentTime());
 
+    sensor_msgs::msg::PointCloud2 radar_data_;
+    radar_data_.header       = radar_msg.header;
+    radar_data_.height       = radar_msg.height;
+    radar_data_.width        = radar_msg.width;
+    radar_data_.fields       = radar_msg.fields;
+    radar_data_.is_bigendian = radar_msg.is_bigendian;
+    radar_data_.point_step   = radar_msg.point_step;
+    radar_data_.row_step     = radar_msg.row_step;
+    radar_data_.data         = radar_msg.data;
+    radar_data_.is_dense     = radar_msg.is_dense;
+
+    radar_data_pub_ = radar_data_;
+
+    queue_radar_buff.push(radar_data_);
+
   } else {
-    scekf_dero_.setRadarCurrentTime(radar_msg.header.stamp.sec + radar_msg.header.stamp.nanosec * 1e-9);
 
-    if ((scekf_dero_.getRadarCurrentTime() <= scekf_dero_.getRadarPreviousTime()) && ekf_rio_init_) {
-      RCLCPP_WARN_ONCE(this->get_logger(), "Radar messages in distorder!");
-      return;
+    double radar_current_time_ = radar_msg.header.stamp.sec + radar_msg.header.stamp.nanosec * 1e-9;
+
+    if ((radar_current_time_ <= scekf_dero_.getRadarPreviousTime()) && ekf_rio_init_) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Radar messages in disorder! Dropping radar data and use accelerometer for dead reckoning!");
+      accel_trigger = true;
+
+    } else {
+      scekf_dero_.setRadarCurrentTime(radar_current_time_);
+      scekf_dero_.setRadarDt();
+      scekf_dero_.setRadarPreviousTime(scekf_dero_.getRadarCurrentTime());
+      accel_trigger = false;
+
+      sensor_msgs::msg::PointCloud2 radar_data_;
+      radar_data_.header       = radar_msg.header;
+      radar_data_.height       = radar_msg.height;
+      radar_data_.width        = radar_msg.width;
+      radar_data_.fields       = radar_msg.fields;
+      radar_data_.is_bigendian = radar_msg.is_bigendian;
+      radar_data_.point_step   = radar_msg.point_step;
+      radar_data_.row_step     = radar_msg.row_step;
+      radar_data_.data         = radar_msg.data;
+      radar_data_.is_dense     = radar_msg.is_dense;
+
+      radar_data_pub_ = radar_data_;
+
+      queue_radar_buff.push(radar_data_);
     }
-
-    scekf_dero_.setRadarDt();
-    scekf_dero_.setRadarPreviousTime(scekf_dero_.getRadarCurrentTime());
   }
-
-  sensor_msgs::msg::PointCloud2 radar_data_;
-  radar_data_.header       = radar_msg.header;
-  radar_data_.height       = radar_msg.height;
-  radar_data_.width        = radar_msg.width;
-  radar_data_.fields       = radar_msg.fields;
-  radar_data_.is_bigendian = radar_msg.is_bigendian;
-  radar_data_.point_step   = radar_msg.point_step;
-  radar_data_.row_step     = radar_msg.row_step;
-  radar_data_.data         = radar_msg.data;
-  radar_data_.is_dense     = radar_msg.is_dense;
-
-  radar_data_pub_ = radar_data_;
-
-  queue_radar_buff.push(radar_data_);
 } // void RadarCallback
 
 void RunRos2Bag::MsgPublish() {
@@ -586,8 +626,8 @@ void RunRos2Bag::MsgPublish() {
 
 void RunRos2Bag::ShutdownHandler() {
   est_save.close();
-  RCLCPP_INFO_ONCE(this->get_logger(), "Skipping %d radar data due to initialization process", radar_skip);
   RCLCPP_INFO_ONCE(this->get_logger(), "Finished simulation!");
+  RCLCPP_INFO_ONCE(this->get_logger(), "Skipping %d radar data due to initialization process", radar_skip);
   RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Rejected %d / %d", radar_reject, radar_valid);
   RCLCPP_INFO_ONCE(this->get_logger(), "Accel: Rejected %d / %d", accel_reject, accel_valid);
   RCLCPP_INFO_ONCE(this->get_logger(), "ICP: Rejected %d / %d", icp_reject, icp_valid);
@@ -735,153 +775,42 @@ void RunRos2Bag::Run() {
           RCLCPP_WARN_ONCE(this->get_logger(), "IMU dt is large: dt = %f", dt_imu_);
 
         if (imu_buff.size() >= 2 && ekf_rio_init_)
-          RCLCPP_WARN(this->get_logger(), "IMU: Data leaked! Skipped %llu data!", imu_buff.size() - 1);
+          RCLCPP_ERROR(this->get_logger(), "IMU: Data leaked! Skipped %llu data!", imu_buff.size() - 1);
 
         if (!use_dr_structure) {
           ekf_rio_.ImuMechanization(imu_buff.front());
           time_update_trigger = true;
-        } else
-          scekf_dero_.GyroscopeMechanization(imu_buff.front());
-
-        imu_buff.clear();
-
-      } // if-else !ekf_rio_init_
-
-      queue_imu_buff.pop();
-
-    } else
-      RCLCPP_WARN_ONCE(this->get_logger(), "Waiting for imu msg!"); // if !queue_imu_buff.empty()
-
-    if (!queue_radar_buff.empty() && !imu_only && use_radar) {
-      radar_buff.emplace_back(queue_radar_buff.front());
-
-      if (!ekf_rio_init_) {
-        radar_skip += 1;
-        RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Data received but rejected due to initialization process!");
-        radar_buff.clear();
-
-      } else {
-        radar_valid             += 1;
-        const bool zupt_trigger  = radar_estimator_.Process(radar_buff.front(), radar_velocity_estimator_param_);
-
-        if (!use_dr_structure) {
-          RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as an aided sensor!");
-          ekf_rio_.setR_Radar(radar_estimator_.getEgoVelocityCovariance());
-
-          Vec3d r_radar = Vec3d::Zero();
-          MatXd H_radar = MatXd::Zero(3, 15);
-
-          state_       = ekf_rio_.getState();
-          wb_corrected = w_b_raw - state_.gyro_bias;
-
-          Mat3d Rbn       = quat2dcm(state_.quaternion);
-          Mat3d Rrb       = imu_radar_calibration_.rotation_matrix;
-          Vec3d p_r_b     = imu_radar_calibration_.position;
-          Vec3d v_w       = skewMatrix(wb_corrected) * p_r_b;
-          Vec3d v_b_n     = state_.velocity;
-          Vec3d v_b_b     = Rbn.transpose() * v_b_n;
-          Mat3d H_v       = Rrb.transpose() * Rbn.transpose();
-          Mat3d H_q       = -Rrb.transpose() * Rbn.transpose() * skewMatrix(v_b_n);
-          Mat3d H_bg      = -Rrb.transpose() * skewMatrix(p_r_b);
-          Vec3d v_r_r_est = Rrb.transpose() * (v_w + v_b_b);
-
-          H_radar.block<3, 3>(0, 3)  = H_v;
-          H_radar.block<3, 3>(0, 6)  = H_q;
-          H_radar.block<3, 3>(0, 12) = H_bg;
-
-          Vec3d v_r_r = radar_estimator_.getEgoVelocity();
-          r_radar     = v_r_r_est - v_r_r;
-
-          if (ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar, v_r_r, radar_velocity_estimator_param_,
-                                              radar_outlier_reject))
-            measurement_update_radar_trigger = true;
-          else {
-            // RCLCPP_WARN(this->get_logger(),
-            // "EKF: Measurement update step is rejected due to radar failed Chi-squared test!");
-            radar_reject += 1;
-          }
         } else {
-          RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as a core sensor!");
-
-          const Vec3d v_r_r = radar_estimator_.getEgoVelocity();
-
-          scekf_dero_.RadarMechanization(v_r_r, imu_radar_calibration_);
+          scekf_dero_.GyroscopeMechanization(imu_buff.front(), accel_trigger);
           time_update_trigger = true;
 
-          curr_radar_velocity = scekf_dero_.getVbn();
+          if (accel_trigger) {
+            curr_radar_velocity = scekf_dero_.getState().velocity;
 
-          if (!accel_init) {
-            prev_radar_velocity = curr_radar_velocity;
-            accel_init          = true;
-          }
-
-          estimated_accel     = (curr_radar_velocity - prev_radar_velocity) / scekf_dero_.getRadarDt();
-          prev_radar_velocity = curr_radar_velocity;
-
-          scekf_dero_.RadarTimeUpdate(radar_estimator_.getEgoVelocity(), radar_estimator_.getEgoVelocityCovariance(),
-                                      imu_radar_calibration_, use_cloning, cloning_window_size);
-
-          if (use_cloning) {
-            window_count += 1;
-            if (window_count == 1) {
-              first_window_radar_scan_inlier = radar_estimator_.getRadarScanInlier();
-              first_window                   = scekf_dero_.getState();
-
-            } else if (window_count == cloning_window_size) {
-              icp_valid             += 1;
-              end_radar_scan_inlier  = radar_estimator_.getRadarScanInlier();
-
-              icp_init_pose = Mat4d::Identity();
-              // Mat3d R_      = Mat3d::Identity();
-              // Vec3d p_      = Vec3d::Zero();
-              // Mat3d R_first = quat2dcm(first_window.quaternion);
-              // Mat3d R_end   = quat2dcm(state_.quaternion);
-              // state_        = scekf_dero_.getState();
-              //
-              // const Mat3d Rbr   = imu_radar_calibration_.rotation_matrix.transpose();
-              // const Mat3d Rrb   = imu_radar_calibration_.rotation_matrix;
-              // const Vec3d p_r_b = imu_radar_calibration_.position;
-              // const Vec3d a_    = state_.position + R_end * p_r_b;
-              // const Vec3d b_    = first_window.position + R_first * p_r_b;
-              // const Mat3d Rnr   = Rbr * R_first.transpose();
-              //
-              // R_ = Rbr * R_first.transpose() * R_end * Rrb;
-              // p_ = Rnr * (a_ - b_);
-
-              // icp_init_pose.block<3, 3>(0, 0) = R_.transpose();
-              // icp_init_pose.block<3, 1>(0, 3) = -R_.transpose() * p_;
-
-              ICPTransform icp_meas = radar_estimator_.solveICP(first_window_radar_scan_inlier, end_radar_scan_inlier,
-                                                                radar_position_estimator_param_, icp_init_pose);
-
-              if (scekf_dero_.RadarMeasurementUpdate(imu_radar_calibration_, icp_meas, radar_outlier_reject,
-                                                     zupt_trigger, first_window)) {
-                measurement_update_radar_trigger = true;
-              } else {
-                // RCLCPP_WARN(this->get_logger(),
-                // "EKF: Measurement update step is rejected due to ICP failed Chi-squared test!");
-                icp_reject += 1;
-              }
-              window_count = 0;
+            if (!accel_init) {
+              prev_radar_velocity = curr_radar_velocity;
+              accel_init          = true;
             }
-          }
 
-          bool accel_update = true;
-          if (use_dr_structure) {
-            if (accel_update && accel_init) {
+            estimated_accel     = (curr_radar_velocity - prev_radar_velocity) / scekf_dero_.getImuDt();
+            prev_radar_velocity = curr_radar_velocity;
+
+            if (accel_init) {
               accel_valid += 1;
               ca_state_    = scekf_dero_.getCoarseAlignmentState();
               state_       = scekf_dero_.getState();
 
+              // clang-format off
               const double accel_norm_residual =
-                  std::sqrt(f_b_raw(0, 0) * f_b_raw(0, 0) + f_b_raw(1, 0) * f_b_raw(1, 0) +
-                            f_b_raw(2, 0) * f_b_raw(2, 0)) -
-                  scekf_dero_.getGravityValue();
+                  std::sqrt(f_b_raw(0, 0) * f_b_raw(0, 0) +
+                            f_b_raw(1, 0) * f_b_raw(1, 0) +
+                            f_b_raw(2, 0) * f_b_raw(2, 0)) - scekf_dero_.getGravityValue();
+              // clang-format on
 
               if (accel_norm_residual < 0.059)
                 scekf_dero_.setR_Accel(accel_roll_pitch_noise_);
               else
-                scekf_dero_.setR_Accel(3.0 * accel_roll_pitch_noise_);
+                scekf_dero_.setR_Accel(accel_angle_adapt_ * accel_roll_pitch_noise_);
 
               Vec2d r_accel = Vec2d::Zero();
               MatXd H_accel = MatXd::Zero(2, 12);
@@ -906,19 +835,214 @@ void RunRos2Bag::Run() {
               r_accel(0, 0) = phi - roll_;
               r_accel(1, 0) = theta - pitch_;
 
+              // signed value of the difference between 2 angles that are wrapped within [-pi pi]
+              //  NOTE: only roll is wrapped because IMU is flipped (check the initial euler angle from CA algorithm)
+              if (r_accel(0, 0) > M_PI)
+                r_accel(0, 0) -= 2.0 * M_PI;
+              else if (r_accel(0, 0) < -M_PI)
+                r_accel(0, 0) += 2.0 * M_PI;
+
               // clang-format off
-              H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta),
-                                           -std::sin(psi) / std::cos(theta),
-                                            std::sin(psi), -std::cos(psi);
+              H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta), -std::sin(psi) / std::cos(theta),
+                                            std::sin(psi)                  , -std::cos(psi);
               // clang-format on
 
               if (scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel, true))
                 measurement_update_accel_trigger = true;
               else {
-                // RCLCPP_WARN(this->get_logger(),
-                // "EKF: Measurement update step is rejected due to accelerometer failed Chi-squared test!");
+                RCLCPP_WARN(this->get_logger(),
+                            "EKF: Measurement update step is rejected because accelerometer failed Chi-squared test!");
                 accel_reject += 1;
               }
+            }
+          }
+        }
+        imu_buff.clear();
+      } // if-else !ekf_rio_init_
+
+      queue_imu_buff.pop();
+    } else
+      RCLCPP_WARN_ONCE(this->get_logger(), "Waiting for imu msg!"); // if !queue_imu_buff.empty()
+
+    if (!queue_radar_buff.empty() && !imu_only && use_radar) {
+      radar_buff.emplace_back(queue_radar_buff.front());
+
+      if (!ekf_rio_init_) {
+        radar_skip += 1;
+        RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Data received but rejected due to initialization process!");
+        radar_buff.clear();
+
+      } else {
+        radar_valid += 1;
+
+        const bool zupt_trigger = radar_estimator_.Process(radar_buff.front(), radar_vel_est_param_);
+
+        if (!use_dr_structure) {
+          RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as an aided sensor!");
+          ekf_rio_.setR_Radar(radar_estimator_.getEgoVelocityCovariance());
+
+          Vec3d r_radar = Vec3d::Zero();
+          MatXd H_radar = MatXd::Zero(3, 15);
+
+          state_       = ekf_rio_.getState();
+          wb_corrected = w_b_raw - state_.gyro_bias;
+
+          Mat3d Rbn = quat2dcm(state_.quaternion);
+          Mat3d Rrb = imu_radar_calibration_.rotation_matrix;
+
+          Vec3d p_r_b = imu_radar_calibration_.position;
+          Vec3d v_w   = skewMatrix(wb_corrected) * p_r_b;
+          Vec3d v_b_n = state_.velocity;
+          Vec3d v_b_b = Rbn.transpose() * v_b_n;
+
+          Mat3d H_v  = Rrb.transpose() * Rbn.transpose();
+          Mat3d H_q  = -Rrb.transpose() * Rbn.transpose() * skewMatrix(v_b_n);
+          Mat3d H_bg = -Rrb.transpose() * skewMatrix(p_r_b);
+
+          H_radar.block<3, 3>(0, 3)  = H_v;
+          H_radar.block<3, 3>(0, 6)  = H_q;
+          H_radar.block<3, 3>(0, 12) = H_bg;
+
+          Vec3d v_r_r_est = Rrb.transpose() * (v_w + v_b_b);
+          Vec3d v_r_r     = radar_estimator_.getEgoVelocity();
+
+          r_radar = v_r_r_est - v_r_r;
+
+          if (ekf_rio_.MeasurementUpdateRadar(r_radar, H_radar, v_r_r, radar_vel_est_param_, radar_outlier_reject))
+            measurement_update_radar_trigger = true;
+          else {
+            RCLCPP_WARN(this->get_logger(),
+                        "EKF: Measurement update step is rejected because radar failed Chi-squared test!");
+            radar_reject += 1;
+          }
+        } else {
+          RCLCPP_INFO_ONCE(this->get_logger(), "Radar: Used as a core sensor!");
+
+          if (!accel_trigger) {
+            const Vec3d v_r_r = radar_estimator_.getEgoVelocity();
+
+            scekf_dero_.RadarMechanization(v_r_r, imu_radar_calibration_);
+            time_update_trigger = true;
+            scekf_dero_.RadarTimeUpdate(radar_estimator_.getEgoVelocity(), radar_estimator_.getEgoVelocityCovariance(),
+                                        imu_radar_calibration_, use_cloning, cloning_window_size);
+            curr_radar_velocity = scekf_dero_.getVbn();
+
+            if (!accel_init) {
+              prev_radar_velocity = curr_radar_velocity;
+              accel_init          = true;
+            }
+            estimated_accel     = (curr_radar_velocity - prev_radar_velocity) / (scekf_dero_.getRadarDt());
+            prev_radar_velocity = curr_radar_velocity;
+          }
+
+          if (use_cloning && !accel_trigger) {
+            window_count += 1;
+
+            if (window_count == 1) {
+              first_window_radar_scan_inlier = radar_estimator_.getRadarScanInlier();
+              first_window                   = scekf_dero_.getState();
+
+            } else if (window_count == cloning_window_size) {
+              icp_valid             += 1;
+              end_radar_scan_inlier  = radar_estimator_.getRadarScanInlier();
+
+              icp_init_pose = Mat4d::Identity();
+
+              // Calculate icp guess pose using the previous step estimation
+              Mat3d R_      = Mat3d::Identity();
+              Vec3d p_      = Vec3d::Zero();
+              Mat3d R_first = quat2dcm(first_window.quaternion);
+              Mat3d R_end   = quat2dcm(state_.quaternion);
+              state_        = scekf_dero_.getState();
+
+              const Mat3d Rbr   = imu_radar_calibration_.rotation_matrix.transpose();
+              const Mat3d Rrb   = imu_radar_calibration_.rotation_matrix;
+              const Vec3d p_r_b = imu_radar_calibration_.position;
+              const Vec3d a_    = state_.position + R_end * p_r_b;
+              const Vec3d b_    = first_window.position + R_first * p_r_b;
+              const Mat3d Rnr   = Rbr * R_first.transpose();
+
+              R_ = Rbr * R_first.transpose() * R_end * Rrb;
+              p_ = Rnr * (a_ - b_);
+
+              icp_init_pose.block<3, 3>(0, 0) = R_.transpose();
+              icp_init_pose.block<3, 1>(0, 3) = -R_.transpose() * p_;
+
+              ICPTransform icp_meas = radar_estimator_.solveICP(first_window_radar_scan_inlier, end_radar_scan_inlier,
+                                                                radar_pos_est_param_, icp_init_pose);
+
+              ca_state_ = scekf_dero_.getCoarseAlignmentState();
+              state_    = scekf_dero_.getState();
+
+              // clang-format off
+                const double accel_norm_residual =
+                  std::sqrt(f_b_raw(0, 0) * f_b_raw(0, 0) +
+                            f_b_raw(1, 0) * f_b_raw(1, 0) +
+                            f_b_raw(2, 0) * f_b_raw(2, 0)) - scekf_dero_.getGravityValue();
+              // clang-format on
+
+              if (accel_norm_residual < 0.059)
+                scekf_dero_.setR_Accel(accel_roll_pitch_noise_);
+              else
+                scekf_dero_.setR_Accel(accel_angle_adapt_ * accel_roll_pitch_noise_);
+
+              Vec2d r_accel = Vec2d::Zero();
+              MatXd H_accel = MatXd::Zero(2, 12);
+
+              Vec3d f_b_hat = f_b_raw - ca_state_.accel_bias;
+
+              Mat3d Cbn = quat2dcm(state_.quaternion);
+              f_b_hat   = f_b_hat - Cbn.transpose() * estimated_accel;
+
+              const double f_x    = f_b_hat(0, 0);
+              const double f_y    = f_b_hat(1, 0);
+              const double f_z    = f_b_hat(2, 0);
+              const double roll_  = std::atan2(-f_y, -f_z);
+              const double foo    = std::sqrt(f_y * f_y + f_z * f_z);
+              const double pitch_ = std::atan2(f_x, foo);
+
+              const Vec3d  euler = quat2euler(state_.quaternion);
+              const double phi   = euler(0, 0);
+              const double theta = euler(1, 0);
+              const double psi   = euler(2, 0);
+
+              r_accel(0, 0) = phi - roll_;
+              r_accel(1, 0) = theta - pitch_;
+
+              // signed value of the difference between 2 angles that are wrapped within [-pi pi]
+              //  NOTE: only roll is wrapped because IMU is flipped (check the initial euler angle from CA algorithm)
+              if (r_accel(0, 0) > M_PI)
+                r_accel(0, 0) -= 2.0 * M_PI;
+              else if (r_accel(0, 0) < -M_PI)
+                r_accel(0, 0) += 2.0 * M_PI;
+
+              // clang-format off
+              H_accel.block<2, 2>(0, 3) << -std::cos(psi) / std::cos(theta), -std::sin(psi) / std::cos(theta),
+                                            std::sin(psi)                  , -std::cos(psi);
+              // clang-format on
+
+              if (zupt_trigger) {
+                RCLCPP_INFO(this->get_logger(), "Zero Velocity Detected!");
+                accel_valid += 1;
+                if (scekf_dero_.MeasurementUpdateAccel(r_accel, H_accel, true))
+                  measurement_update_accel_trigger = true;
+                else {
+                  accel_reject += 1;
+                  RCLCPP_INFO(
+                      this->get_logger(),
+                      "EKF: Measurement update step is rejected because accelerometer failed Chi-squared test!");
+                }
+              } else {
+                if (scekf_dero_.RadarMeasurementUpdate(imu_radar_calibration_, icp_meas, radar_outlier_reject,
+                                                       first_window, r_accel, H_accel)) {
+                  measurement_update_radar_trigger = true;
+                } else {
+                  RCLCPP_WARN(this->get_logger(),
+                              "EKF: Measurement update step is rejected because ICP failed Chi-squared test!");
+                  icp_reject += 1;
+                }
+              }
+              window_count = 0;
             }
           }
         }

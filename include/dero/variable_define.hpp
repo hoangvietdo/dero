@@ -31,6 +31,7 @@ typedef Eigen::Matrix<double, 1, 1>   Mat1d;
 typedef Eigen::Matrix<double, 2, 2>   Mat2d;
 typedef Eigen::Matrix<double, 3, 3>   Mat3d;
 typedef Eigen::Matrix<double, 4, 4>   Mat4d;
+typedef Eigen::Matrix<double, 5, 5>   Mat5d;
 typedef Eigen::Matrix<double, 10, 10> Mat10d;
 typedef Eigen::Matrix<double, 12, 12> Mat12d;
 typedef Eigen::Matrix<double, 13, 13> Mat13d;
@@ -44,6 +45,7 @@ typedef Eigen::Matrix<double, 1, 1>  Vec1d;
 typedef Eigen::Matrix<double, 2, 1>  Vec2d;
 typedef Eigen::Matrix<double, 3, 1>  Vec3d;
 typedef Eigen::Matrix<double, 4, 1>  Vec4d;
+typedef Eigen::Matrix<double, 5, 1>  Vec5d;
 typedef Eigen::Matrix<double, 10, 1> Vec10d;
 typedef Eigen::Matrix<double, 11, 1> Vec11d;
 typedef Eigen::Matrix<double, 12, 1> Vec12d;
@@ -187,6 +189,9 @@ typedef struct {
     double transform_eps;
     double euclidean_fit_eps;
     double ransac_outlier_reject_threshold;
+    double icp_std_x;
+    double icp_std_y;
+    double icp_std_z;
 } RadarPositionEstimatorParam;
 
 typedef struct {

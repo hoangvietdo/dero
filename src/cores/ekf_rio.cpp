@@ -22,7 +22,8 @@ namespace incsl {
 EkfRio::EkfRio() {} // EkfRio
 
 void EkfRio::InitializeState(const std::vector<sensor_msgs::msg::Imu> &imu_buff) {
-  // Refererence: https://github.com/lastflowers/envio/blob/master/src/core/sl_iekf.cpp#L818
+  // Refererence:
+  // https://github.com/lastflowers/envio/blob/master/src/core/sl_iekf.cpp#L818
   // Coarse alignment
 
   Vec3d f_b_mean = Vec3d::Zero();
@@ -96,7 +97,7 @@ void EkfRio::ImuMechanization(const sensor_msgs::msg::Imu &imu_msg) {
   const Vec4d k_4(0.5 * calculateLeftOmega(prevQuaternion + k_3 * dt_imu) * zero_omega);
 
   state.quaternion = prevQuaternion + (k_1 + 2 * k_2 + 2 * k_3 + k_4) * dt_imu / 6;
-  state.quaternion = quatNormalize(state.quaternion);
+  // state.quaternion = quatNormalize(state.quaternion);
   const Quaternion newQuaternion(state.quaternion(0, 0), state.quaternion(1, 0), state.quaternion(2, 0),
                                  state.quaternion(3, 0));
 
@@ -209,8 +210,12 @@ void EkfRio::ErrorCorrection(const Vec15d &error_state_) {
   state.gyro_bias  -= error_state.gyro_bias;
 
   Vec4d error_quaternion;
-  error_quaternion << 1.0, 0.5 * error_state.misalignment(0, 0), 0.5 * error_state.misalignment(1, 0),
-      0.5 * error_state.misalignment(2, 0);
+  // clang-format off
+  error_quaternion << 1.0,
+                      0.5 * error_state.misalignment(0, 0),
+                      0.5 * error_state.misalignment(1, 0),
+                      0.5 * error_state.misalignment(2, 0);
+  // clang-format on
 
   state.quaternion = quatMultiplication(error_quaternion, state.quaternion);
 } // void ErrorCorrection
