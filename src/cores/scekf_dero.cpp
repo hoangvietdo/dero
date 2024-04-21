@@ -180,8 +180,8 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
   const double tau_radar = 1000;
 
   F.block<3, 3>(3, 6) = Rbn;
-  F.block<3, 3>(6, 6) = 0.0 * (-1.0 / tau_gyro) * Mat3d::Identity();
-  F.block<3, 3>(9, 9) = 0.0 * (-1.0 / tau_radar) * Mat3d::Identity();
+  F.block<3, 3>(6, 6) = (-1.0 / tau_gyro) * Mat3d::Identity();
+  F.block<3, 3>(9, 9) = (-1.0 / tau_radar) * Mat3d::Identity();
 
   G.block<3, 3>(0, 0) = Rbn * imu_radar_calibration_.rotation_matrix;
   G.block<3, 3>(0, 3) = Rbn * skewMatrix(imu_radar_calibration_.position);
@@ -351,7 +351,7 @@ bool ScEkfDero::MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_acce
                          (H_accel * covariance_matrix.posteriori * H_accel.transpose() + R_discrete_accel).inverse() *
                          r_accel;
 
-    boost::math::chi_squared chiSquaredDist(1.0);
+    boost::math::chi_squared chiSquaredDist(2.0);
     const double             gamma_thresh = boost::math::quantile(chiSquaredDist, 1 - 0.05);
 
     if (gamma < gamma_thresh) {
