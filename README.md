@@ -1,7 +1,7 @@
 # DeRO
 ## Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization
 ## News / Events
-- **June 06, 2024** - The paper has been accepted for publication in the IROS 2024 as an oral presentation.
+- **June 30, 2024** - The paper has been accepted for publication in the IROS 2024 as an oral presentation.
 - **March 11, 2024** - The manuscript has been online at the [arXiv](https://arxiv.org/abs/2403.05136).
 - **March 05, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
 
