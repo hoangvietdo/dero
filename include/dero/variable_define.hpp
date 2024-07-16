@@ -58,7 +58,8 @@ typedef Eigen::VectorXd              VecXd;
 
 typedef Eigen::Quaterniond Quaternion;
 
-typedef struct {
+typedef struct State {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d position;
     Vec3d velocity;
     Vec4d quaternion;
@@ -67,13 +68,15 @@ typedef struct {
     Vec3d radar_scale;
 } State;
 
-typedef struct {
+typedef struct StateCloning {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d position;
     Vec3d velocity;
     Vec4d quaternion;
 } StateCloning;
 
-typedef struct {
+typedef struct Init {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     double position;
     double velocity;
     double euler_XY;
@@ -83,7 +86,8 @@ typedef struct {
     double radar_scale;
 } Init;
 
-typedef struct {
+typedef struct ErrorState {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d position;
     Vec3d velocity;
     Vec3d misalignment;
@@ -92,13 +96,15 @@ typedef struct {
     Vec3d radar_scale;
 } ErrorState;
 
-typedef struct {
+typedef struct ErrorStateCloning {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d position;
     Vec3d velocity;
     Vec3d misalignment;
 } ErrorStateCloning;
 
-typedef struct {
+typedef struct CoarseAlignmentState {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d euler;
     Vec3d position;
     Vec3d velocity;
@@ -107,29 +113,36 @@ typedef struct {
     Vec3d radar_scale;
 } CoarseAlignmentState;
 
-typedef struct {
+typedef struct CovarianceMatrix {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Mat15d priori;
     Mat15d posteriori;
 } CovarianceMatrix;
 
-typedef struct {
+typedef struct CovarianceMatrixDr {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Mat12d priori;
     Mat12d posteriori;
 } CovarianceMatrixDr;
 
-typedef struct {
+typedef struct CovarianceMatrixCloning {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Mat18d priori;
     Mat18d posteriori;
 } CovarianceMatrixCloning;
 
-typedef struct {
+typedef struct NoiseCovarianceMatrix {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Mat12d Q;
     Mat3d  R_radar;
+    Mat1d  R_radar_yaw;
 } NoiseCovarianceMatrix;
 
-typedef struct {
+typedef struct NoiseCovarianceMatrixDr {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Mat12d Q;
     Mat2d  R_accel;
+    Mat1d  R_radar_yaw;
 } NoiseCovarianceMatrixDr;
 
 typedef struct {
@@ -140,7 +153,8 @@ typedef struct {
     double radar_scale_random_walk;
 } Noise;
 
-typedef struct {
+typedef struct IMURadarCalibrationParam {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Vec3d position;
     Mat3d rotation_matrix;
     Vec4d quaternion;
@@ -194,13 +208,15 @@ typedef struct {
     double icp_std_z;
 } RadarPositionEstimatorParam;
 
-typedef struct {
+typedef struct ICPTransform {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    bool   converge;
     Mat4d  homo;
     Mat3d  rotation;
     Vec3d  translation;
+    Vec3d  P_vec;
     double score;
     size_t number_of_points;
-    Vec3d  P_vec;
 } ICPTransform;
 
 } // namespace incsl

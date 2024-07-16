@@ -32,18 +32,18 @@ namespace incsl {
 #define D2R (double)(M_PI / 180.0)
 #define R2D (double)(180.0 / M_PI)
 
-Vec4d euler2quat(Vec3d &euler);
-Mat3d euler2dcm(Vec3d &euler);
+Vec4d euler2quat(const Vec3d &euler);
+Mat3d euler2dcm(const Vec3d &euler);
 
-Vec4d dcm2quat(Mat3d &dcm);
-Vec3d dcm2euler(Mat3d &dcm);
+Vec4d dcm2quat(const Mat3d &dcm);
+Vec3d dcm2euler(const Mat3d &dcm);
 
-Vec3d quat2euler(Vec4d &quat);
-Mat3d quat2dcm(Vec4d &quat);
+Vec3d quat2euler(const Vec4d &quat);
+Mat3d quat2dcm(const Vec4d &quat);
 
-Vec4d quatNormalize(Vec4d &quat);
-Mat3d dcmNormalize(Mat3d &dcm);
-Mat3d skewMatrix(Vec3d &vec);
+Vec4d quatNormalize(const Vec4d &quat);
+Mat3d dcmNormalize(const Mat3d &dcm);
+Mat3d skewMatrix(const Vec3d &vec);
 } // namespace incsl
 
 #endif // NAV_CONVERT_HPP

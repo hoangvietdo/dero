@@ -67,6 +67,7 @@ void EkfRio::InitializeState(const std::vector<sensor_msgs::msg::Imu> &imu_buff)
   state.quaternion = euler2quat(ca_state.euler);
   state.accel_bias = ca_state.accel_bias;
   state.gyro_bias  = ca_state.gyro_bias;
+
 } // void InitializeState
 
 void EkfRio::ImuMechanization(const sensor_msgs::msg::Imu &imu_msg) {
@@ -97,7 +98,8 @@ void EkfRio::ImuMechanization(const sensor_msgs::msg::Imu &imu_msg) {
   const Vec4d k_4(0.5 * calculateLeftOmega(prevQuaternion + k_3 * dt_imu) * zero_omega);
 
   state.quaternion = prevQuaternion + (k_1 + 2 * k_2 + 2 * k_3 + k_4) * dt_imu / 6;
-  // state.quaternion = quatNormalize(state.quaternion);
+  state.quaternion = quatNormalize(state.quaternion);
+
   const Quaternion newQuaternion(state.quaternion(0, 0), state.quaternion(1, 0), state.quaternion(2, 0),
                                  state.quaternion(3, 0));
 
@@ -286,5 +288,4 @@ void EkfRio::setCovarianceMatrix(const Init &init) {
   covariance_matrix.posteriori.block<3, 3>(9, 9)   = init.accel_bias * init.accel_bias * Mat3d::Identity();
   covariance_matrix.posteriori.block<3, 3>(12, 12) = init.gyro_bias * init.gyro_bias * Mat3d::Identity();
 } // setCovarianceMatrix
-
 } // namespace incsl

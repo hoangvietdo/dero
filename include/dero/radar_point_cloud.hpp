@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Reference:
-// https://github.com/christopherdoer/reve/blob/master/radar_ego_velocity_estimator/src/radar_point_cloud.cpp
+// https://github.com/christopherdoer/reve/blob/bcc5f6cae00ab6529774c2c2df10a170a9eb01b7/radar_ego_velocity_estimator/include/radar_ego_velocity_estimator/data_types.h
 
 #ifndef RADAR_POINT_CLOUD_HPP
 #define RADAR_POINT_CLOUD_HPP
@@ -34,8 +34,6 @@ struct RadarPointCloudType {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-// Reference:
-// https://github.com/christopherdoer/reve/blob/bcc5f6cae00ab6529774c2c2df10a170a9eb01b7/radar_ego_velocity_estimator/include/radar_ego_velocity_estimator/data_types.h
 struct SmartMicroRadarPointCloudType {
     float number_of_objects;
     float cycle_duration;
@@ -65,5 +63,27 @@ struct RadarIndex {
 };
 
 } // namespace incsl
+
+// clang-format off
+POINT_CLOUD_REGISTER_POINT_STRUCT(incsl::RadarPointCloudType,
+                                  (float, x, x)
+                                  (float, y, y)
+                                  (float, z, z)
+                                  (float, snr_db, snr_db)
+                                  (float, noise_db, noise_db)
+                                  (float, v_doppler_mps, v_doppler_mps))
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(incsl::SmartMicroRadarPointCloudType,
+                                  (float, number_of_objects, Number_Of_Objects)
+                                  (float, cycle_duration, Cycle_Duration)
+                                  (float, range, Range)
+                                  (float, azimuth, Azimuth)
+                                  (float, speed_radial, Speed_Radial)
+                                  (float, rcs, RCS)
+                                  (float, power, Power)
+                                  (float, noise, Noise)
+                                  (float, elevation, Elevation))
+
+// clang-format on
 
 #endif // !RADAR_POINT_CLOUD_HPP

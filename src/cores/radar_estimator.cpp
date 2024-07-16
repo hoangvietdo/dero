@@ -22,7 +22,7 @@
 
 namespace incsl {
 
-RadarEstimator::RadarEstimator() {} // RadarVelocityEstimator
+RadarEstimator::RadarEstimator(rclcpp::Node::SharedPtr node) : node_(node) {} // RadarVelocityEstimator
 
 bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg,
                              const RadarVelocityEstimatorParam   &param) {
@@ -49,7 +49,7 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
       p.range = p.getVector3fMap().norm();
     }
 
-    radar_info_ = "Detected supported (IWR1443BOOST) radar point cloud type!";
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Detected supported (IWR1443BOOST) radar point cloud type!");
 
   } else if (fields.find("Number_Of_Objects") != fields.end() && fields.find("Cycle_Duration") != fields.end() &&
              fields.find("Range") != fields.end() && fields.find("Azimuth") != fields.end() &&
@@ -57,9 +57,9 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
              fields.find("Power") != fields.end() && fields.find("Noise") != fields.end() &&
              fields.find("Elevation") != fields.end()) {
 
-    radar_info_ = "Detected supported (UMRR-11 type-132) radar point cloud type!";
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Detected supported (UMRR-11 type-132) radar point cloud type!");
   } else {
-    radar_info_ = "Detected unsupported radar point cloud type!";
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Detected unsupported radar point cloud type!");
     ego_velocity_ << 1.0 / 0.0, 1.0 / 0.0, 1.0 / 0.0; // NaN
   }
 
@@ -98,7 +98,7 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
 
     if (median < param.zero_velocity_threshold) {
       zupt_trigger = true;
-      radar_info_  = "Zero velocity detected!";
+      RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Zero velocity detected!");
 
       v_r = Vec3d(0, 0, 0);
       P_v_r.setIdentity();
@@ -112,7 +112,6 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
     } else {
       zupt_trigger = false;
       // LSQ velocity estimation
-      radar_info_  = "No zero velocity!";
       MatXd radar_data(valid_targets.size(), 4); // rx, ry, rz, v
       uint  j = 0;
 
@@ -136,9 +135,12 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
           for (uint i = 0; i < inlier_idx_best.size(); ++i)
             radar_data_inlier.row(i) = radar_data.row(inlier_idx_best.at(i));
 
-          std::cout << "using ODR" << std::endl;
+          RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Using ODR!");
           solve3DODR(radar_data_inlier, v_r, P_v_r, param);
-        } // else std::cout << "ODR condition is not satisfied, skipping ODR algorithm!" << std::endl; // if use_odr
+        } else
+          RCLCPP_INFO_ONCE(node_->get_logger(),
+                           "[Velocity]: ODR condition is not satisfied, skipping ODR algorithm!"); // if use_odr
+
         inlier_idx_best.clear();
       } else {
         solve3DLsq(radar_data, v_r, P_v_r, true, param);
@@ -168,6 +170,7 @@ bool RadarEstimator::Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg
   setInlierRadarPcl(pcl_vec_);
 
   foo_radar_scan_inlier = radar_scan_inlier;
+
   pcl_vec_.clear();
   radar_scan_inlier.clear();
   valid_targets.clear();
@@ -201,8 +204,6 @@ Mat3d RadarEstimator::getEgoVelocityCovariance() { return ego_velocity_covarianc
 void RadarEstimator::setEgoVelocityCovariance(Mat3d P_v_r) {
   ego_velocity_covariance_ = P_v_r;
 } // setEgoVelocityCovariance
-
-std::string RadarEstimator::getRadarInfo() { return radar_info_; } // getRadarInfo
 
 void RadarEstimator::solve3DLsqRansac(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_r,
                                       std::vector<uint> &inlier_idx_best, const RadarVelocityEstimatorParam param) {
@@ -285,11 +286,11 @@ bool RadarEstimator::solve3DLsq(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_
         sigma_v_r = sigma_v_r.array().sqrt();
 
         if (sigma_v_r.x() < param.max_sigma_x && sigma_v_r.y() < param.max_sigma_y && sigma_v_r.z() < param.max_sigma_z)
-          radar_info_ = "Valid LSQ-RANSAC estimation!";
+          RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Valid LSQ-RANSAC estimataion");
 
         return true;
       } else {
-        radar_info_ = "Invalid LSQ-RANSAC estimation!";
+        RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: Invalid LSQ-RANSAC estimataion");
       }
     }
   } else {
@@ -338,9 +339,9 @@ void RadarEstimator::solve3DODR(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_
   P_v_r += offset.asDiagonal();
 
   if (sigma_odr.x() < param_.max_sigma_x && sigma_odr.y() < param_.max_sigma_y && sigma_odr.z() < param_.max_sigma_z)
-    std::cout << "ODR: Success" << std::endl;
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: ODR success!");
   else
-    std::cout << "ODR: Failed" << std::endl;
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[Velocity]: ODR failed!");
 } // solve3DODR
 
 ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
@@ -378,36 +379,47 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
 
   pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 
-  if (radar_position_estimator_param.max_corres_dis != 0.0)
+  if (radar_position_estimator_param.max_corres_dis != 0.0) {
     icp.setMaxCorrespondenceDistance(radar_position_estimator_param.max_corres_dis);
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[ICP]: Max correspondence distance is %.2f [m]",
+                     radar_position_estimator_param.max_corres_dis);
+  }
 
-  if (radar_position_estimator_param.transform_eps != 0.0)
+  if (radar_position_estimator_param.transform_eps != 0.0) {
     icp.setTransformationEpsilon(radar_position_estimator_param.transform_eps);
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[ICP]: Transformation epsilon is %.1e",
+                     radar_position_estimator_param.transform_eps);
+  }
 
-  if (radar_position_estimator_param.max_iter != 0)
+  if (radar_position_estimator_param.max_iter != 0) {
     icp.setMaximumIterations(radar_position_estimator_param.max_iter);
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[ICP]: Max iteration is %d", radar_position_estimator_param.max_iter);
+  }
 
-  if (radar_position_estimator_param.euclidean_fit_eps != 0.0)
+  if (radar_position_estimator_param.euclidean_fit_eps != 0.0) {
     icp.setEuclideanFitnessEpsilon(radar_position_estimator_param.euclidean_fit_eps);
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[ICP]: Euclidean fitness epsilon is %.1e",
+                     radar_position_estimator_param.euclidean_fit_eps);
+  }
 
-  if (radar_position_estimator_param.ransac_outlier_reject_threshold != 0.0)
+  if (radar_position_estimator_param.ransac_outlier_reject_threshold != 0.0) {
     icp.setRANSACOutlierRejectionThreshold(radar_position_estimator_param.ransac_outlier_reject_threshold);
+    RCLCPP_INFO_ONCE(node_->get_logger(), "[ICP]: RANSAC outlier reject threshold is %.2f",
+                     radar_position_estimator_param.ransac_outlier_reject_threshold);
+  }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr align(new pcl::PointCloud<pcl::PointXYZ>);
-  icp.setInputSource(prev_);
-  icp.setInputTarget(curr_);
+  icp.setInputSource(curr_);
+  icp.setInputTarget(prev_);
 
   const Mat4f guess_pose = init_guess_pose.cast<float>();
 
   icp.align(*align, guess_pose);
 
-  const Mat4f  prev2curr = icp.getFinalTransformation();
+  const Mat4f  curr2prev = icp.getFinalTransformation();
   const double score     = icp.getFitnessScore();
 
-  const Mat4d prev2curr_       = prev2curr.cast<double>();
-  Mat4d       curr2prev_       = Mat4d::Identity();
-  curr2prev_.block<3, 3>(0, 0) = prev2curr_.block<3, 3>(0, 0).transpose();
-  curr2prev_.block<3, 1>(0, 3) = -prev2curr_.block<3, 3>(0, 0).transpose() * prev2curr_.block<3, 1>(0, 3);
+  const Mat4d curr2prev_ = curr2prev.cast<double>();
 
   ICPTransform icp_results;
   icp_results.rotation    = Mat3d::Identity();
@@ -420,18 +432,20 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
   icp_results.homo.block<3, 3>(0, 0) = icp_results.rotation;
   icp_results.homo.block<3, 1>(0, 3) = icp_results.translation;
   icp_results.score                  = score;
-  icp_results.number_of_points       = curr_pcl_normalized_msg.points.size();
+  icp_results.number_of_points       = prev_->points.size();
 
   bool is_converged = icp.hasConverged();
   if (!is_converged) {
-    std::cout << "ICP is not converged!";
-  }
+    RCLCPP_ERROR(node_->get_logger(), "[ICP]: is not converged!");
+    icp_results.converge = false;
+  } else
+    icp_results.converge = true;
 
   pcl::CorrespondencesPtr corresps(new pcl::Correspondences);
 
   pcl::registration::CorrespondenceEstimation<pcl::PointXYZ, pcl::PointXYZ> corresp_est;
-  corresp_est.setInputSource(align);
-  corresp_est.setInputTarget(curr_);
+  corresp_est.setInputSource(prev_);
+  corresp_est.setInputTarget(align);
   corresp_est.determineCorrespondences(*corresps, radar_position_estimator_param.max_corres_dis);
 
   double sum_x        = 0.0;
@@ -445,20 +459,19 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
     const int idx_source = corresps->at(i).index_query;
     const int idx_target = corresps->at(i).index_match;
 
-    const double foo_x  = curr_->at(idx_target).x - align->at(idx_source).x;
-    const double foo_y  = curr_->at(idx_target).y - align->at(idx_source).y;
-    const double foo_z  = curr_->at(idx_target).z - align->at(idx_source).z;
-    sum_x              += (foo_x * foo_x);
-    sum_y              += (foo_y * foo_y);
-    sum_z              += (foo_z * foo_z);
+    const double foo_x = prev_->at(idx_source).x - align->at(idx_target).x;
+    const double foo_y = prev_->at(idx_source).y - align->at(idx_target).y;
+    const double foo_z = prev_->at(idx_source).z - align->at(idx_target).z;
+
+    sum_x += (foo_x * foo_x);
+    sum_y += (foo_y * foo_y);
+    sum_z += (foo_z * foo_z);
   }
 
-  // const double N = static_cast<double>(corresps->size());
   m_sqrt_sum_x = std::sqrt(sum_x) / corresps->size();
   m_sqrt_sum_y = std::sqrt(sum_y) / corresps->size();
   m_sqrt_sum_z = std::sqrt(sum_z) / corresps->size();
 
-  // const double sum  = sum_x + sum_y + sum_z;
   icp_results.P_vec = Vec3d::Zero();
 
   // clang-format off
@@ -467,23 +480,6 @@ ICPTransform RadarEstimator::solveICP(const pcl::PointCloud<incsl::RadarPointClo
                        radar_position_estimator_param.icp_std_z + icp_results.score * m_sqrt_sum_z;
   // clang-format on
 
-  //  NOTE: this transform is for "only radar localization"
-  const bool radarOdom = false;
-  if (radarOdom) {
-    Mat4d curr_trans = prev_trans * prev2curr_;
-    prev_trans       = curr_trans;
-
-    trans.rotation               = Mat3d::Identity();
-    trans.translation            = Vec3d::Zero();
-    trans.homo                   = Mat4d::Identity();
-    trans.score                  = 0.0;
-    trans.rotation               = curr_trans.block<3, 3>(0, 0);
-    trans.translation            = curr_trans.block<3, 1>(0, 3);
-    trans.homo.block<3, 3>(0, 0) = trans.rotation;
-    trans.homo.block<3, 1>(0, 3) = trans.translation;
-    trans.score                  = score;
-    trans.number_of_points       = curr_pcl_normalized_msg.points.size();
-  }
   return icp_results;
 } // solveICP
 

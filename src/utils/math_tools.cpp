@@ -21,20 +21,20 @@ using namespace Eigen;
 
 namespace incsl {
 
-Mat3d skewMatrix(Vec3d &vec) {
+Mat3d skewMatrix(const Vec3d &vec) {
   Mat3d Matrix;
 
   Matrix << 0.0, -vec(2, 0), vec(1, 0), vec(2, 0), 0.0, -vec(0, 0), -vec(1, 0), vec(0, 0), 0.0;
   return Matrix;
 } // skewMatrix
 
-Mat15d EnsurePSD(Mat15d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSD
+Mat15d EnsurePSD(const Mat15d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSD
 
-Mat12d EnsurePSDDr(Mat12d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSDDr
+Mat12d EnsurePSDDr(const Mat12d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSDDr
 
-Mat18d EnsurePSDCloning(Mat18d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSDCloning
+Mat18d EnsurePSDCloning(const Mat18d &matrix) { return (matrix + matrix.transpose()) / 2.0; } // EnsurePSDCloning
 
-Vec4d quatMultiplication(Vec4d &p, Vec4d &q) {
+Vec4d quatMultiplication(const Vec4d &p, const Vec4d &q) {
   double p_w = p(0, 0);
   double p_x = p(1, 0);
   double p_y = p(2, 0);
@@ -53,7 +53,7 @@ Vec4d quatMultiplication(Vec4d &p, Vec4d &q) {
   return quaternion;
 } // quatMultiplication
 
-Mat4d calculateOmega(Vec3d &w) {
+Mat4d calculateOmega(const Vec3d &w) {
   Mat4d Omega;
   // clang-format off
   Omega << 0.0 , -w(0), -w(1), -w(2),

@@ -37,15 +37,19 @@ class ScEkfDero {
     void InitializeState(const std::vector<sensor_msgs::msg::Imu> &imu_buff);
 
     void GyroscopeMechanization(const sensor_msgs::msg::Imu &imu_msg, const bool &accel_trigger);
-    void RadarMechanization(const Vec3d &v_r, IMURadarCalibrationParam &imu_radar_calibration_);
+    void RadarMechanization(const Vec3d &v_r, IMURadarCalibrationParam &imu_radar_calibration_, const Vec3d &w_b_hat_);
     void RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCalibrationParam &imu_radar_calibration_,
-                         const bool &use_cloning, const int &window_size);
+                         const bool &use_cloning, const int &window_size, const Vec3d &w_b_hat_);
 
-    bool RadarMeasurementUpdate(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
-                                const bool &outlier_reject, State &first_state, const Vec2d &r_accel,
-                                const MatXd &H_accel);
+    bool MeasurementUpdateDR(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
+                             const bool &outlier_reject, State &first_state, const Vec2d &r_accel, const MatXd &H_accel,
+                             const double &outlier_percentil_dr);
 
-    bool MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel, const bool &outlier_reject);
+    bool MeasurementUpdateAccel(const Vec2d &r_accel, const MatXd &H_accel, const bool &outlier_reject,
+                                const double &outlier_percentil_accel);
+
+    bool MeasurementUpdateICP(IMURadarCalibrationParam &imu_radar_calibration_, const ICPTransform &icp_meas,
+                              const bool &outlier_reject, State &first_state, const double &outlier_percentil_dr);
 
     void   ErrorCorrection(const VecXd &error_state_);
     double getGravityValue();
@@ -101,12 +105,9 @@ class ScEkfDero {
     CoarseAlignmentState    ca_state;
     ErrorState              error_state;
     State                   state;
-    ErrorStateCloning       error_state_cloning;
-    StateCloning            state_cloning;
     CovarianceMatrixDr      covariance_matrix;
     CovarianceMatrixCloning covariance_matrix_cloning;
     NoiseCovarianceMatrixDr noise_covariance_matrix;
-    RadarEstimator          radar_estimator_;
 
 }; // class
 } // namespace incsl

@@ -39,34 +39,13 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 
-// clang-format off
-POINT_CLOUD_REGISTER_POINT_STRUCT(incsl::RadarPointCloudType,
-                                  (float, x, x)
-                                  (float, y, y)
-                                  (float, z, z)
-                                  (float, snr_db, snr_db)
-                                  (float, noise_db, noise_db)
-                                  (float, v_doppler_mps, v_doppler_mps))
-
-POINT_CLOUD_REGISTER_POINT_STRUCT(incsl::SmartMicroRadarPointCloudType,
-                                  (float, number_of_objects, Number_Of_Objects)
-                                  (float, cycle_duration, Cycle_Duration)
-                                  (float, range, Range)
-                                  (float, azimuth, Azimuth)
-                                  (float, speed_radial, Speed_Radial)
-                                  (float, rcs, RCS)
-                                  (float, power, Power)
-                                  (float, noise, Noise)
-                                  (float, elevation, Elevation))
-// clang-format on
-
 namespace incsl {
 
 class RadarEstimator {
   public:
-    RadarEstimator();
+    RadarEstimator(rclcpp::Node::SharedPtr node);
 
-    bool Process(const sensor_msgs::msg::PointCloud2 &radar_msg, const RadarVelocityEstimatorParam &param);
+    bool Process(const sensor_msgs::msg::PointCloud2 &radar_PCL2_msg, const RadarVelocityEstimatorParam &param);
 
     ICPTransform solveICP(const pcl::PointCloud<incsl::RadarPointCloudType> &prev_pcl_msg,
                           const pcl::PointCloud<incsl::RadarPointCloudType> &curr_pcl_msg,
@@ -79,13 +58,13 @@ class RadarEstimator {
     ICPTransform                         getIcpTransform();
     pcl::PointCloud<RadarPointCloudType> getRadarScanInlier();
 
-    std::string getRadarInfo();
-
     sensor_msgs::msg::PointCloud2 getInlierRadarRos2PCL2();
     std::vector<Vec3d>            getInlierRadarPcl();
     std::vector<Vec3d>            pcl_vec_;
 
   private:
+    rclcpp::Node::SharedPtr node_;
+
     bool first_scan   = true;
     bool zupt_trigger = true;
 
@@ -113,8 +92,6 @@ class RadarEstimator {
     sensor_msgs::msg::PointCloud2 inlier_radar_msg;
     sensor_msgs::msg::PointCloud2 inlier_radar_msg_;
 
-    std::string radar_info_;
-
     RadarIndex idx_;
 
     RadarPointCloudType toRadarPointCloudType(const Vec11d &item, const RadarIndex &idx);
@@ -123,8 +100,6 @@ class RadarEstimator {
     void solve3DODR(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_r, const RadarVelocityEstimatorParam param_);
     void solve3DLsqRansac(const MatXd &radar_data, Vec3d &v_r, Mat3d &P_v_r, std::vector<uint> &inlier_idx_best,
                           const RadarVelocityEstimatorParam param);
-    void pclToPcl2Msg(pcl::PointCloud<RadarPointCloudType>     radar_scan_inlier,
-                      sensor_msgs::msg::PointCloud2::SharedPtr inlier_radar_msg);
     void setInlierRadarRos2PCL2(sensor_msgs::msg::PointCloud2 radar_msg);
     void setInlierRadarPcl(const std::vector<Vec3d> &pcl_vec);
     void setEgoVelocity(Vec3d v_r);

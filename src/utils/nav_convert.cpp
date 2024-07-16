@@ -25,7 +25,7 @@ using namespace Eigen;
 
 namespace incsl {
 
-Vec4d euler2quat(Vec3d &euler) {
+Vec4d euler2quat(const Vec3d &euler) {
   double phi   = euler(0);
   double theta = euler(1);
   double psi   = euler(2);
@@ -54,7 +54,7 @@ Vec4d euler2quat(Vec3d &euler) {
   return quat;
 } // euler2quat
 
-Mat3d euler2dcm(Vec3d &euler) {
+Mat3d euler2dcm(const Vec3d &euler) {
   double phi   = euler(0);
   double theta = euler(1);
   double psi   = euler(2);
@@ -80,7 +80,7 @@ Mat3d euler2dcm(Vec3d &euler) {
   return dcm;
 } // euler2dcm
 
-Vec4d dcm2quat(Mat3d &dcm) {
+Vec4d dcm2quat(const Mat3d &dcm) {
   Vec4d quat = Vec4d::Zero();
 
   quat(0, 0) = std::sqrt(1.0 / 4.0 * (1.0 + dcm(0, 0) + dcm(1, 1) + dcm(2, 2)));
@@ -93,7 +93,7 @@ Vec4d dcm2quat(Mat3d &dcm) {
     if (quat(i, 0) > quat(max_idx, 0)) {
       max_idx = i;
     } // if
-  } // for
+  }   // for
 
   if (max_idx == 0) {
     quat(1, 0) = (dcm(2, 1) - dcm(1, 2)) / 4.0 / quat(0, 0);
@@ -126,7 +126,7 @@ Vec4d dcm2quat(Mat3d &dcm) {
   return quat;
 } // dcm2quat
 
-Vec3d dcm2euler(Mat3d &dcm) {
+Vec3d dcm2euler(const Mat3d &dcm) {
   Vec3d  euler = Vec3d::Zero();
   double phi, theta, psi;
 
@@ -150,7 +150,7 @@ Vec3d dcm2euler(Mat3d &dcm) {
   return euler;
 } // dcm2euler
 
-Vec3d quat2euler(Vec4d &quat) {
+Vec3d quat2euler(const Vec4d &quat) {
   Vec3d euler = Vec3d::Zero();
   Mat3d foo   = Mat3d::Zero();
 
@@ -160,7 +160,7 @@ Vec3d quat2euler(Vec4d &quat) {
   return euler;
 } // quat2euler
 
-Mat3d quat2dcm(Vec4d &quat) {
+Mat3d quat2dcm(const Vec4d &quat) {
   Mat3d  dcm = Mat3d::Zero();
   double a   = quat(0, 0);
   Vec3d  vec;
@@ -172,7 +172,7 @@ Mat3d quat2dcm(Vec4d &quat) {
   return dcm;
 } // quat2dcm
 
-Vec4d quatNormalize(Vec4d &quat) {
+Vec4d quatNormalize(const Vec4d &quat) {
   Vec4d quat_ = Vec4d::Zero();
 
   quat_ = quat / quat.norm();
@@ -180,7 +180,7 @@ Vec4d quatNormalize(Vec4d &quat) {
   return quat_;
 } // quatNormalize
 
-Mat3d dcmNormalize(Mat3d &dcm) {
+Mat3d dcmNormalize(const Mat3d &dcm) {
   Mat3d dcm_ = Mat3d::Zero();
 
   JacobiSVD<Mat3d> svd(dcm, ComputeFullU | ComputeFullV);

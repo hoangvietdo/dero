@@ -72,24 +72,23 @@ class RunRos2Bag : public rclcpp::Node {
   private:
     std::string imu_topic_name_;
     std::string radar_topic_name_;
-    std::string groundtruth_topic_name_;
     std::string est_save_dir_;
     std::string bag_dir;
 
     std::ofstream est_save;
+    std::ofstream test_save;
 
     std::mutex mutex_;
 
-    sensor_msgs::msg::PointCloud2   radar_data_pub_;
-    nav_msgs::msg::Path             pose_path_;
-    nav_msgs::msg::Path             pose_path_gt_;
-    geometry_msgs::msg::PoseStamped gt_msg;
+    sensor_msgs::msg::PointCloud2 radar_data_pub_;
+    nav_msgs::msg::Path           pose_path_;
 
     std::queue<sensor_msgs::msg::Imu>         queue_imu_buff;
     std::queue<sensor_msgs::msg::PointCloud2> queue_radar_buff;
     std::queue<sensor_msgs::msg::PointCloud2> queue_radar_pub_buff;
 
     std::vector<sensor_msgs::msg::Imu>         imu_buff;
+    std::vector<sensor_msgs::msg::Imu>         radar_w_buff;
     std::vector<sensor_msgs::msg::PointCloud2> radar_buff;
     std::vector<std::string>                   topics;
 
@@ -99,15 +98,17 @@ class RunRos2Bag : public rclcpp::Node {
     int min_number_sat_;
     int num_points;
     int max_iter_;
-    int accel_reject = 0;
-    int accel_valid  = 0;
-    int icp_reject   = 0;
-    int icp_valid    = 0;
-    int viet         = 0;
-    int radar_valid  = 0;
-    int radar_reject = 0;
-    int radar_skip   = 0;
-    int window_count = 0;
+    int accel_reject    = 0;
+    int accel_valid     = 0;
+    int icp_reject      = 0;
+    int icp_valid       = 0;
+    int viet            = 0;
+    int radar_valid     = 0;
+    int radar_reject    = 0;
+    int radar_skip      = 0;
+    int window_count    = 0;
+    int total_imu_msg   = 0;
+    int total_radar_msg = 0;
 
     uint N_ransac_points_;
 
@@ -188,11 +189,15 @@ class RunRos2Bag : public rclcpp::Node {
     double icp_std_y_;
     double icp_std_z_;
     double accel_angle_adapt_;
+    double sigma_accel_roll_;
+    double sigma_accel_pitch_;
+    double outlier_percentil_dr_;
+    double outlier_percentil_icp_;
+    double outlier_percentil_accel_;
 
-    bool ekf_rio_init_                    = false;
+    bool filter_init_                     = false;
     bool imu_data_received_               = false;
     bool radar_data_received_             = false;
-    bool groundtruth_data_received_       = false;
     bool time_update_trigger              = false;
     bool measurement_update_radar_trigger = false;
     bool measurement_update_accel_trigger = false;
@@ -202,20 +207,20 @@ class RunRos2Bag : public rclcpp::Node {
     bool window_slicing                   = false;
     bool accel_init                       = false;
     bool accel_trigger                    = false;
+    bool radar_trigger                    = false;
+    bool zupt_trigger                     = false;
     bool use_cloning;
     bool imu_only;
     bool use_radar;
-    bool groundtruth_included;
+    bool use_accel;
     bool use_ransac_;
     bool use_odr_;
     bool icp_init;
 
     Vec2d accel_roll_pitch_noise_;
     Vec3d wb_corrected;
-    Vec3d w_b_raw;
-    Vec3d f_b_raw;
-    Vec3d f_b_mean = Vec3d::Zero();
-    Vec3d w_b_mean = Vec3d::Zero();
+    Vec3d w_b_transformed;
+    Vec3d f_b_transformed;
     Vec3d local_origin_llh_;
     Vec3d local_origin_ecef_;
     Vec3d true_scale;
@@ -241,7 +246,6 @@ class RunRos2Bag : public rclcpp::Node {
     CovarianceMatrixDr          covariance_matrix_dr_;
     CovarianceMatrixCloning     covariance_matrix_cloning_;
     CoarseAlignmentState        ca_state_;
-    RadarEstimator              radar_estimator_;
     RadarVelocityEstimatorParam radar_vel_est_param_;
     RadarPositionEstimatorParam radar_pos_est_param_;
     IMURadarCalibrationParam    imu_radar_calibration_;
@@ -251,12 +255,13 @@ class RunRos2Bag : public rclcpp::Node {
 
     rclcpp::TimerBase::SharedPtr                                callback_timer_process_;
     rclcpp::TimerBase::SharedPtr                                viet_timer_;
+    rclcpp::TimerBase::SharedPtr                                node_handler_timer_;
     rclcpp::CallbackGroup::SharedPtr                            pub_callback_group_;
     rclcpp::CallbackGroup::SharedPtr                            process_callback_group_;
+    rclcpp::CallbackGroup::SharedPtr                            node_handler_callback_group_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr radar_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr radar_raw_publisher_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr           pose_path_publisher_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr           pose_path_gt_publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr         viet_publisher_;
 
     rosbag2_cpp::StorageOptions   storage_options;
@@ -265,6 +270,9 @@ class RunRos2Bag : public rclcpp::Node {
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_pose_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_radar_;
 
+    std::shared_ptr<RadarEstimator> radar_estimator_;
+
+    void NodeHandler();
     void LoadParameters();
     void Run();
     void MsgPublish();

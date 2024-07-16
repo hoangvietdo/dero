@@ -30,14 +30,15 @@
 
 namespace incsl {
 
-Mat3d  skewMatrix(Vec3d &vec);
-Mat12d EnsurePSDDr(Mat12d &matrix);
-Mat15d EnsurePSD(Mat15d &matrix);
-Mat18d EnsurePSDCloning(Mat18d &matrix);
-Vec4d  quatMultiplication(Vec4d &q1, Vec4d &q2);
-Mat4d  calculateOmega(Vec3d &w);
+Mat3d  skewMatrix(const Vec3d &vec);
+Mat12d EnsurePSDDr(const Mat12d &matrix);
+Mat15d EnsurePSD(const Mat15d &matrix);
+Mat18d EnsurePSDCloning(const Mat18d &matrix);
+Vec4d  quatMultiplication(const Vec4d &q1, const Vec4d &q2);
+Mat4d  calculateOmega(const Vec3d &w);
 Mat4d  calculateLeftOmega(const Vec4d &v);
 double wrapTo2Pi(const double &angle_);
+
 } // namespace incsl
 
 #endif // MATH_TOOLS_HPP

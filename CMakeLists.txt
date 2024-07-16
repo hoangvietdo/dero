@@ -64,18 +64,30 @@ add_library(dero_lib SHARED
             src/utils/math_tools.cpp
 )
 
-add_executable(scekf_dero_ros2bag_node
-               src/nodes/scekf_dero_ros2bag_node.cpp 
+add_executable(incsl_ros2bag_node
+               src/nodes/incsl_ros2bag_node.cpp 
 )
 
-target_link_libraries(scekf_dero_ros2bag_node
+add_executable(incsl_ros2bag_fix_node
+               src/utils/fix_ros2bag.cpp
+)
+
+target_link_libraries(incsl_ros2bag_node
                       dero_lib
                       ${PCL_LIBRARIES}
                       ${BOOST_LIBRARIES}
                       odrpack
 )
 
-ament_target_dependencies(scekf_dero_ros2bag_node
+ament_target_dependencies(incsl_ros2bag_fix_node
+                          rclcpp
+                          std_msgs
+                          sensor_msgs
+                          nav_msgs
+                          rosbag2_cpp
+)
+
+ament_target_dependencies(incsl_ros2bag_node
                           rclcpp
                           std_msgs
                           sensor_msgs
@@ -99,11 +111,13 @@ ament_target_dependencies(dero_lib
                           pcl_conversions
 )
 install(TARGETS
-  scekf_dero_ros2bag_node
+  incsl_ros2bag_node
+  incsl_ros2bag_fix_node
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY
   launch
+  config
   DESTINATION share/${PROJECT_NAME}/)
 
 install(DIRECTORY
