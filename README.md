@@ -53,13 +53,15 @@ Note: There will be some warnings, but just ignore them.
 ## 7. Citation
 If you find this work beneficial to your academic research, we would greatly appreciate it if you could reference our paper in your citations.
 ```bibtex
-@misc{do2024dero,
-      title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
-      author={Hoang Viet Do and Yong Hun Kim and Joo Han Lee and Min Ho Lee and Jin Woo Song},
-      year={2024},
-      eprint={2403.05136},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@INPROCEEDINGS{do2024dero,
+	author={Do, Hoang Viet and Kim, Yong Hun and Lee, Joo Han and Lee, Min Ho and Song, Jin Woo},
+	booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)., to be published}, 
+	title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
+	year={},
+	volume={},
+	number={},
+	pages={},
+	doi={},
 }
 ```
 
