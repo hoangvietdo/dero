@@ -4,6 +4,7 @@
 - **June 30, 2024** - The paper has been accepted for publication in the IROS 2024 as an oral presentation.
 - **March 11, 2024** - The manuscript has been online at the [arXiv](https://arxiv.org/abs/2403.05136).
 - **March 05, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
+- **December 26, 2024** - The manuscript has been online at the [IEEE IROS](https://ieeexplore.ieee.org/document/10801645).
 
 ## 1. Overview
 This is a ROS 2 package for DeRO, written in C++. DeRO utilizes 4D point cloud measurements from a millimeter-wave Frequency-Modulated Continuous Wave (FMCW) radar and IMU measurements to estimate the robot's poses. Specifically, Doppler velocity and gyroscope measurements are used to calculate odometry, while the radar's range and accelerometer measurements are utilized to update the estimation using a Stochastic Cloning Extended Kalman Filter (SCEKF).
@@ -54,15 +55,15 @@ Note: There will be some warnings, but just ignore them.
 If you find this work beneficial to your academic research, we would greatly appreciate it if you could reference our paper in your citations.
 ```bibtex
 @INPROCEEDINGS{do2024dero,
-	author={Do, Hoang Viet and Kim, Yong Hun and Lee, Joo Han and Lee, Min Ho and Song, Jin Woo},
-	booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)., to be published}, 
-	title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
-	year={},
-	volume={},
-	number={},
-	pages={},
-	doi={},
-}
+  author={Do, Hoang Viet and Hun Kim, Yong and Lee, Joo Han and Ho Lee, Min and Song, Jin Woo},
+  booktitle={2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={DeRO: Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={8547-8554},
+  keywords={Accelerometers;Matched filters;Dead reckoning;Radar measurements;Estimation;Doppler radar;Gyroscopes;Odometry;Doppler effect;Velocity measurement},
+  doi={10.1109/IROS58592.2024.10801645}}
 ```
 
 ## 8. License
