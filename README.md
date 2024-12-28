@@ -1,10 +1,10 @@
 # DeRO
 ## Dead Reckoning Based on Radar Odometry With Accelerometers Aided for Robot Localization
 ## News / Events
+- **December 26, 2024** - The manuscript has been online at the [IEEE IROS](https://ieeexplore.ieee.org/document/10801645).
 - **June 30, 2024** - The paper has been accepted for publication in the IROS 2024 as an oral presentation.
 - **March 11, 2024** - The manuscript has been online at the [arXiv](https://arxiv.org/abs/2403.05136).
 - **March 05, 2024** - Our paper has been submitted to [IROS 2024](https://iros2024-abudhabi.org/).
-- **December 26, 2024** - The manuscript has been online at the [IEEE IROS](https://ieeexplore.ieee.org/document/10801645).
 
 ## 1. Overview
 This is a ROS 2 package for DeRO, written in C++. DeRO utilizes 4D point cloud measurements from a millimeter-wave Frequency-Modulated Continuous Wave (FMCW) radar and IMU measurements to estimate the robot's poses. Specifically, Doppler velocity and gyroscope measurements are used to calculate odometry, while the radar's range and accelerometer measurements are utilized to update the estimation using a Stochastic Cloning Extended Kalman Filter (SCEKF).
