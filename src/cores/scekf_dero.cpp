@@ -241,12 +241,13 @@ void ScEkfDero::RadarTimeUpdate(const Vec3d &v_r, const Mat3d &P_v_r, IMURadarCa
         covariance_matrix_cloning.priori.block<12, 12>(0, 0) = covariance_matrix.priori;
 
         // Upper Right
+        // NOTE: There is a typo in equation (20) of the paper. The corrected code is shown below.
         covariance_matrix_cloning.priori.block<12, 6>(0, 12) =
-            Phi_accumulation.block<6, 12>(0, 0).transpose() * covariance_matrix_cloning.posteriori.block<6, 6>(12, 12);
+            Phi_accumulation * covariance_matrix_cloning.posteriori.block<12, 6>(0, 12);
 
         // Lower left
         covariance_matrix_cloning.priori.block<6, 12>(12, 0) =
-            covariance_matrix_cloning.posteriori.block<6, 6>(12, 12) * Phi_accumulation.block<6, 12>(0, 0);
+            covariance_matrix_cloning.priori.block<12, 6>(0, 12).transpose();
 
         // Lower Right (No need to update)
         covariance_matrix_cloning.priori.block<6, 6>(12, 12) = covariance_matrix_cloning.posteriori.block<6, 6>(12, 12);
